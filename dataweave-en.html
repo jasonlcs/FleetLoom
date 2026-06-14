@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DataWeave</title>
+<style>
+:root {
+  --bg: #f8f9fb;
+  --surface: #fff;
+  --surface2: #f0f1f4;
+  --border: #e2e5ea;
+  --text: #212529;
+  --text2: #5f6b7a;
+  --text3: #8b95a5;
+  --accent: #3b6df0;
+  --accent-hover: #2b5cdb;
+  --accent-bg: #edf2fd;
+  --red: #e5484d;
+  --green: #30a46c;
+  --amber: #f5a623;
+  --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,.1);
+  --radius: 8px;
+  --radius-sm: 5px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: "SF Mono", "Fira Code", "Cascadia Code", Consolas, "DejaVu Sans Mono", monospace;
+  --transition: 150ms ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111318;
+    --surface: #1a1d23;
+    --surface2: #21242c;
+    --border: #2d3139;
+    --text: #e1e4e8;
+    --text2: #8b949e;
+    --text3: #5d6570;
+    --accent: #58a6ff;
+    --accent-hover: #79b8ff;
+    --accent-bg: #0d2847;
+    --red: #f85149;
+    --green: #3fb950;
+    --amber: #d29922;
+    --shadow: 0 1px 3px rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.2);
+    --shadow-lg: 0 4px 16px rgba(0,0,0,.4);
+  }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%; overflow: hidden;
+  background: var(--bg); color: var(--text);
+  font-family: var(--font); font-size: 13px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Toolbar ── */
+#toolbar {
+  height: 42px; min-height: 42px; display: flex; align-items: center;
+  padding: 0 12px; gap: 10px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  z-index: 100; position: relative;
+}
+#brand {
+  font-size: 15px; font-weight: 700; color: var(--accent);
+  letter-spacing: -0.3px; user-select: none; margin-right: 6px;
+}
+#brand span { font-weight: 400; color: var(--text2); }
+
+.toolbar-spacer { flex: 1; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border-radius: var(--radius-sm); font-size: 12px;
+  font-family: var(--font); font-weight: 500; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text2); transition: all var(--transition);
+  white-space: nowrap; user-select: none;
+}
+.btn:hover { background: var(--surface2); color: var(--text); border-color: var(--text3); }
+.btn:active { transform: scale(0.97); }
+
+.btn-primary {
+  background: var(--accent); color: #fff; border-color: var(--accent);
+  font-weight: 600; padding: 6px 16px; font-size: 13px;
+}
+.btn-primary:hover { background: var(--accent-hover); color: #fff; border-color: var(--accent-hover); }
+
+.btn-ghost { border-color: transparent; background: transparent; }
+.btn-ghost:hover { background: var(--surface2); }
+
+.btn-xs { padding: 3px 7px; font-size: 11px; gap: 2px; }
+.btn-icon { padding: 5px; line-height: 1; }
+
+.toolbar-div { width: 1px; height: 20px; background: var(--border); }
+
+.toggle {
+  display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
+  font-size: 11.5px; color: var(--text2); user-select: none;
+  padding: 4px 8px; border-radius: var(--radius-sm); transition: background var(--transition);
+}
+.toggle:hover { background: var(--surface2); }
+.toggle input { accent-color: var(--accent); }
+
+/* ── Main Layout ── */
+#main {
+  display: flex; flex-direction: column;
+  height: calc(100% - 42px);
+}
+
+.panel-wrap {
+  position: relative; overflow: hidden;
+  flex: 1 1 0; min-height: 80px;
+  display: flex; flex-direction: column;
+  background: var(--surface);
+}
+
+.panel-header {
+  height: 30px; min-height: 30px; display: flex; align-items: center;
+  padding: 0 10px; gap: 4px;
+  background: var(--surface2); border-bottom: 1px solid var(--border);
+  user-select: none; font-size: 11px; font-weight: 600; color: var(--text2);
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+.panel-header .title {
+  margin-right: auto; color: var(--text3);
+}
+
+.panel-header .badge {
+  background: var(--accent-bg); color: var(--accent); font-size: 10px;
+  padding: 1px 6px; border-radius: 10px; font-weight: 600;
+}
+
+.panel-body {
+  flex: 1; position: relative; overflow: hidden;
+}
+
+.panel-body textarea {
+  width: 100%; height: 100%; display: block;
+  border: none; outline: none; padding: 12px 16px;
+  font-family: var(--mono); font-size: 12.5px; line-height: 1.55;
+  background: var(--surface); color: var(--text);
+  resize: none; tab-size: 2;
+}
+.panel-body textarea::placeholder { color: var(--text3); }
+.panel-body textarea:focus { background: var(--bg); }
+
+/* ── Separators (inline) ── */
+.separators {
+  position: absolute; bottom: 6px; right: 10px; z-index: 10;
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 8px; border-radius: var(--radius-sm);
+  background: var(--surface2); border: 1px solid var(--border);
+  font-size: 10.5px; color: var(--text2); opacity: 0.7;
+  transition: opacity var(--transition);
+}
+.separators:hover, .separators:focus-within { opacity: 1; }
+.separators input {
+  width: 48px; border: 1px solid var(--border); border-radius: 3px;
+  padding: 2px 5px; font-family: var(--mono); font-size: 11px;
+  background: var(--surface); color: var(--text); outline: none;
+  text-align: center;
+}
+.separators input:focus { border-color: var(--accent); }
+.separators input.error { border-color: var(--red); background: rgba(229,72,77,.08); }
+.separators label { display: flex; align-items: center; gap: 2px; cursor: pointer; }
+.separators label input { width: auto; accent-color: var(--accent); }
+.separators label.csv-label { font-weight: 600; color: var(--accent); }
+
+/* ── Resize handles ── */
+.resize-handle {
+  height: 4px; min-height: 4px; flex-shrink: 0;
+  background: var(--border); cursor: ns-resize;
+  transition: background var(--transition);
+  position: relative; z-index: 10;
+}
+.resize-handle::after {
+  content: ''; position: absolute; top: -3px; left: 0; right: 0; bottom: -3px;
+}
+.resize-handle:hover, .resize-handle:active { background: var(--accent); }
+
+/* ── Results dashboard ── */
+.dashboard {
+  height: 44px; min-height: 44px; display: flex; align-items: center;
+  padding: 0 10px; gap: 8px;
+  background: var(--surface2); border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ── Select ── */
+select {
+  padding: 4px 8px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); font-size: 11.5px; font-family: var(--font);
+  cursor: pointer; outline: none; max-width: 200px;
+}
+select:focus { border-color: var(--accent); }
+
+/* ── Overlay / Modal ── */
+.overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,.5); z-index: 10000;
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeIn 120ms ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal {
+  background: var(--surface); border-radius: var(--radius);
+  max-width: 720px; width: 94%; max-height: 85vh;
+  display: flex; flex-direction: column;
+  box-shadow: var(--shadow-lg); border: 1px solid var(--border);
+  animation: slideUp 150ms ease;
+}
+@keyframes slideUp { from { opacity: 0; transform: translateY(12px); } }
+
+.modal-header {
+  display: flex; align-items: center; padding: 12px 16px;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.modal-header h2 { font-size: 14px; font-weight: 600; margin-right: auto; }
+.modal-close {
+  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+  border: none; background: none; color: var(--text2); font-size: 18px;
+  cursor: pointer; border-radius: var(--radius-sm); transition: background var(--transition);
+}
+.modal-close:hover { background: var(--surface2); }
+
+.modal-body { overflow-y: auto; padding: 16px; flex: 1; }
+.modal-body h3 { font-size: 12.5px; color: var(--accent); margin: 0 0 6px; }
+.modal-body h4 { font-size: 11.5px; margin: 14px 0 4px; color: var(--text2); }
+.modal-body table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 4px 0 12px; }
+.modal-body td { padding: 3px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.modal-body td:first-child { font-family: var(--mono); white-space: nowrap; font-weight: 600; color: var(--accent); width: 1%; padding-right: 14px; }
+.modal-body td:nth-child(2) { color: var(--text2); }
+.modal-body code {
+  background: var(--accent-bg); padding: 1px 5px; border-radius: 3px;
+  font-family: var(--mono); font-size: 0.93em;
+}
+.modal-body pre {
+  background: var(--bg); padding: 10px 14px; border-radius: var(--radius-sm);
+  overflow-x: auto; font-family: var(--mono); font-size: 11.5px;
+  margin: 4px 0 10px; line-height: 1.5; border: 1px solid var(--border);
+}
+
+.modal-footer {
+  padding: 10px 16px; border-top: 1px solid var(--border);
+  font-size: 11px; color: var(--text3); text-align: center; flex-shrink: 0;
+}
+
+/* ── Help tabs ── */
+.help-tabs {
+  display: flex; border-bottom: 1px solid var(--border);
+  padding: 0 16px; flex-shrink: 0;
+}
+.help-tab {
+  padding: 8px 14px; cursor: pointer; border: none; background: none;
+  color: var(--text2); font-size: 12px; font-family: var(--font);
+  border-bottom: 2px solid transparent; transition: all var(--transition);
+}
+.help-tab:hover { color: var(--text); }
+.help-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+/* ── Snippet list ── */
+.snippet-item {
+  display: flex; align-items: flex-start; padding: 8px 10px;
+  border-radius: var(--radius-sm); cursor: pointer;
+  border: 1px solid transparent; transition: all var(--transition);
+  margin: 1px 0;
+}
+.snippet-item:hover { background: var(--surface2); border-color: var(--border); }
+.snippet-item .name { font-weight: 600; font-size: 12px; }
+.snippet-item .preview { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.snippet-item .date { font-size: 10.5px; color: var(--text3); margin-top: 1px; }
+.snippet-del {
+  flex-shrink: 0; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+  border: none; background: none; color: var(--text3); font-size: 16px;
+  cursor: pointer; border-radius: var(--radius-sm); opacity: 0; transition: opacity var(--transition);
+}
+.snippet-item:hover .snippet-del { opacity: 1; }
+.snippet-del:hover { background: var(--red); color: #fff; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+</style>
+</head>
+<body>
+
+<!-- ── Toolbar ── -->
+<div id="toolbar">
+  <span id="brand">DataWeave <span>· 文字處理工具</span></span>
+  <div class="toolbar-div"></div>
+  <button class="btn btn-primary" onclick="go();" title="計算 (F5)">▶ 計算</button>
+  <label class="toggle"><input type="checkbox" id="chkAuto" checked onchange="setauto();">auto</label>
+  <label class="toggle"><input type="checkbox" id="chkFilter" onchange="toggleFilter();">篩選</label>
+  <label class="toggle"><input type="checkbox" id="chkCollapse" onchange="toggleCollapse();">摺疊</label>
+  <div class="toolbar-div"></div>
+  <select id="selectSnippet" onchange="insertsnippet(this);">
+    <option value="">插入片段…</option>
+    <option value="$rownum">列號（從0起）</option>
+    <option value="$rownumOne">列號（從1起）</option>
+    <option value="$row">整列原始內容</option>
+    <option value="$numrows">總列數</option>
+    <option value="<% $0.toUpperCase() %>">全部大寫 TO UPPER CASE</option>
+    <option value="<% $0.toLowerCase() %>">全部小寫 to lower case</option>
+    <option value="<% $0.toPascalCase() %>">帕斯卡 ToPascalCase</option>
+    <option value="<% $0.toCamelCase() %>">駝峰 toCamelCase</option>
+    <option value="<% $0.toSentenceCase() %>">句首大寫 To sentence case</option>
+    <option value="<% $0.toSnakeCase() %>">蛇形 to_snake_case</option>
+    <option value="<% $0.toKebabCase() %>">烤肉串 to-kebab-case</option>
+    <option value="<% $0.toTitleCase() %>">標題 To Title Case</option>
+    <option value="<% $0.toWords() %>">拆字 To Words</option>
+    <option value="<% $0.reverse() %>">反轉 Reverse</option>
+    <option value="<% if ($rownum != 0) { 'AND '; } else {'    '} %>">條件：第一列除外</option>
+    <option value="<% if ($rownumOne != $numrows) { ','; } %>">條件：最後列除外</option>
+    <option value="$ONCE<ul>&#10;$EACH  <li>$row</li>&#10;$ONCE</ul>">HTML 無序列表</option>
+    <option value="$ONCE<table>&#10;$EACH  <tr><td>$row</td></tr>&#10;$ONCE</table>">HTML 表格</option>
+    <option value="$ONCE<table>&#10; <thead><tr><th>$0</th><th>$1</th></tr></thead>&#10; <tbody>&#10;$EACH+  <tr><td>$0</td><td>$1</td></tr>&#10;$ONCE </tbody>&#10;</table>">HTML 表格（含標題）</option>
+  </select>
+  <div class="toolbar-spacer"></div>
+  
+  <button class="btn btn-ghost btn-xs" onclick="saveSnippet();" id="btnSaveSnippet" title="儲存 pattern">💾 儲存</button>
+  <button class="btn btn-ghost btn-xs" onclick="showSnippets();" title="載入 pattern">📂 載入</button>
+  <button class="btn btn-ghost btn-xs" onclick="downloadResult();" title="下載結果">⤓ 下載</button>
+  <button class="btn btn-ghost btn-xs" onclick="exportProject();" title="匯出專案 (JSON)">📤 匯出</button>
+  <button class="btn btn-ghost btn-xs" onclick="$('importFile').click();" title="匯入專案 (JSON)">📥 匯入</button>
+  <input type="file" id="importFile" accept=".json" onchange="importProject(this);" style="display:none">
+  <button class="btn btn-ghost btn-xs" onclick="clearDefault();" title="清除全部">✕ 清除</button>
+  <button class="btn btn-ghost btn-icon" onclick="showHelp();" title="使用說明">?</button>
+</div>
+
+<!-- ── Main Panels ── -->
+<div id="main">
+  <!-- Data -->
+  <div class="panel-wrap" id="dataPanel">
+    <div class="panel-header">
+      <span class="title">DATA</span>
+      <span class="badge" id="statsData"></span>
+      <a class="btn btn-ghost btn-xs" onclick="sortData();" title="A→Z 排序">↓↑ 排序</a>
+      <a class="btn btn-ghost btn-xs" onclick="sortDataByCol();" title="指定欄位排序">↓ 欄排序</a>
+      <a class="btn btn-ghost btn-xs" onclick="invertData();" title="反轉順序">↕ 反轉</a>
+      <a class="btn btn-ghost btn-xs" onclick="shuffleData();" title="隨機排列">⟳ 隨機</a>
+      <a class="btn btn-ghost btn-xs" onclick="removeDataDuplicates();" title="移除重複列">⊜ 去重</a>
+    </div>
+    <div class="panel-body">
+      <textarea id="txtData" oninput="auto();" spellcheck="false"></textarea>
+       <div class="separators">
+        <span>Col</span>
+        <input type="text" value="," id="fieldDelim" oninput="auto();" spellcheck="false" title="Use \t for tab">
+        <label title="Regex"><input type="checkbox" id="chkColRegex" onchange="setColumnDelimiterIsRegex(this.checked);">rx</label>
+        <label title="CSV mode (RFC 4180)"><input type="checkbox" id="chkCsvMode" onchange="setCsvMode(this.checked);">CSV</label>
+        <span>Row</span>
+        <input type="text" value="\n" id="rowDelim" oninput="auto();" spellcheck="false" title="Use \r\n for Windows, \n for Unix">
+        <label title="Regex"><input type="checkbox" id="chkRowRegex" onchange="setRowDelimiterIsRegex(this.checked);">rx</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="resize-handle" id="handle1"></div>
+
+  <!-- Filter -->
+  <div class="panel-wrap" id="filterPanel" style="display:none">
+    <div class="panel-header"><span class="title">篩選 (WHERE)</span></div>
+    <div class="panel-body">
+      <textarea id="txtFilter" oninput="auto();" spellcheck="false" placeholder="$rowNum > 0 && $2 == 'guitar'"></textarea>
+    </div>
+  </div>
+
+  <!-- Pattern -->
+  <div class="panel-wrap" id="patternPanel">
+    <div class="panel-header"><span class="title">PATTERN</span></div>
+    <div class="panel-body">
+      <textarea id="txtPattern" oninput="auto();" spellcheck="false"></textarea>
+    </div>
+  </div>
+
+  <div class="resize-handle" id="handle2"></div>
+
+  <!-- Results -->
+  <div class="panel-wrap" id="resultsPanel">
+    <div class="dashboard">
+      <span class="badge" id="statsResults" style="margin-right:auto;"></span>
+      <a class="btn btn-ghost btn-xs" onclick="sortResult();" title="A→Z 排序">↓↑ 排序</a>
+      <a class="btn btn-ghost btn-xs" onclick="sortResultByCol();" title="指定欄位排序">↓ 欄排序</a>
+      <a class="btn btn-ghost btn-xs" onclick="invertResult();" title="反轉順序">↕ 反轉</a>
+      <a class="btn btn-ghost btn-xs" onclick="shuffleResult();" title="隨機排列">⟳ 隨機</a>
+      <a class="btn btn-ghost btn-xs" onclick="removeResultDuplicates();" title="移除重複列">⊜ 去重</a>
+      <a class="btn btn-ghost btn-xs" onclick="copyResult();" id="copyBtn" title="複製到剪貼簿">📋 複製</a>
+    </div>
+    <div class="panel-body">
+      <textarea id="txtResults" spellcheck="false" readonly></textarea>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Global state ──
+var trimFields = true;
+var ignoreEmptyFields = false;
+var addLineSep = true;
+var ignoreEmptyRows = true;
+var autoPreview = true;
+var columnDelimiterIsRegex = false;
+var rowDelimiterIsRegex = false;
+var csvMode = false;
+var isFiltering = false;
+var collapseMode = false;
+var ready = false;
+var autoCalculationInProgress = false;
+var _debounceTimer = 0;
+var currentLang = "en";
+
+var defaultText = "Lumbergh, Bill, Initech\nWaddams, Milton, Initech\nGibbons, Peter, Initech\nBolton, Michael, Initech";
+var defaultPattern = "To: $1.$0@$2.com\nHello $1 $0,\nI'm sorry to inform you of a terrible accident at $2.\n---";
+
+// ── L10N ──
+var L10N={en:{brand:'DataWeave',subtitle:'text manipulator',calc:'▶ Calculate',calcTitle:'Calculate (F5)',
+auto:'auto',filter:'filter',collapse:'collapse',snippetPlaceholder:'Insert snippet…',
+saveBtn:'💾 Save',saveTitle:'Save pattern',loadBtn:'📂 Load',loadTitle:'Load pattern',
+shareBtn:'🔗 Share',shareTitle:'Copy shareable URL',downloadBtn:'⤓ Download',downloadTitle:'Download results',
+clearBtn:'✕ Clear',clearTitle:'Clear all',
+dataHeader:'DATA',filterHeader:'FILTER (WHERE)',patternHeader:'PATTERN',
+sortTitle:'Sort A→Z',colSortTitle:'Sort by column',invertTitle:'Reverse order',shuffleTitle:'Randomize',dedupTitle:'Remove duplicates',
+sortLabel:'↓↑ Sort',colSortLabel:'↓ Col',invertLabel:'↕ Invert',shuffleLabel:'⟳ Shuffle',dedupLabel:'⊜ Unique',
+copyLabel:'📋 Copy',copyTitle:'Copy to clipboard',copiedLabel:'✅ Copied',
+colLabel:'Col',rowLabel:'Row',regexLabel:'rx',regexTitle:'Regular expression',
+myPatterns:'── My Patterns ──',snippetRowNum:'Row number (0-based)',snippetRowNumOne:'Row number (1-based)',snippetRow:'Entire current row',snippetNumRows:'Total row count',
+snippetUpper:'TO UPPER CASE',snippetLower:'to lower case',snippetPascal:'To PascalCase',snippetCamel:'to camelCase',
+snippetSentence:'To sentence case',snippetSnake:'to_snake_case',snippetKebab:'to-kebab-case',snippetTitle:'To Title Case',
+snippetWords:'To Words',snippetReverse:'Reverse',snippetCondFirst:'Unless first row',snippetCondLast:'Unless last row',
+snippetHtmlUl:'HTML Unordered list',snippetHtmlTable:'HTML Table',snippetHtmlTableHdr:'HTML Table with headers',
+sortPrompt:'Sort by column number (0-based):',
+savePrompt:'Name for this pattern:',saveEmpty:'Pattern is empty.',noSnippets:'No saved patterns yet. Click 💾 Save to add one.',
+delConfirm:'Delete this pattern?',copied:'URL copied!',copyPrompt:'Copy URL:',
+savedPatterns:'Saved Patterns',savedFooter:' pattern(s) stored in browser',helpTitle:'Help & Reference',
+langLabel:'EN',langTitle:'English'}};
+
+function t(key){return L10N[currentLang]&&L10N[currentLang][key]||L10N['en'][key]||key;}
+
+function applyL10N(){
+  var L=L10N[currentLang];
+  // Toolbar
+  var d=document;
+  var brand=d.querySelector('#brand');if(brand)brand.innerHTML=L.brand+' <span>· '+L.subtitle+'</span>';
+  var calc=d.getElementById('calc_button');if(calc){calc.value=L.calc;calc.title=L.calcTitle;}
+  var sel=d.getElementById('selectSnippet');if(sel&&sel.options[0])sel.options[0].textContent=L.snippetPlaceholder;
+  // Toolbar buttons
+  var btns=[['saveSnippet',L.saveBtn,L.saveTitle],['showSnippets',L.loadBtn,L.loadTitle],['downloadResult',L.downloadBtn,L.downloadTitle],['clearDefault',L.clearBtn,L.clearTitle]];
+  btns.forEach(function(b){var el=d.querySelector('[onclick*="'+b[0]+'"]');if(el){el.childNodes[0]&&(el.childNodes[0].textContent=b[1]);el.title=b[2];}});
+  var copyBtn=d.getElementById('copyBtn');if(copyBtn && copyBtn.textContent.indexOf('✅')===-1)copyBtn.textContent=L.copyLabel;
+  // Toggles
+  var toggles=d.querySelectorAll('.toggle');if(toggles[1]&&toggles[1].childNodes[1])toggles[1].childNodes[1].textContent=L.filter;if(toggles[2]&&toggles[2].childNodes[1])toggles[2].childNodes[1].textContent=L.collapse;
+  // Panels
+  var ph=d.querySelectorAll('.panel-header .title');if(ph[0])ph[0].textContent=L.dataHeader;if(ph[1])ph[1].textContent=L.filterHeader;if(ph[2])ph[2].textContent=L.patternHeader;
+  // Data action buttons
+  var dbtns=d.querySelectorAll('#dataPanel .btn-ghost');for(var i=0;i<dbtns.length;i++){var db=dbtns[i],fn=db.getAttribute('onclick')||'';if(fn.indexOf('sortData()')>=0){db.title=L.sortTitle;db.textContent=L.sortLabel;}else if(fn.indexOf('sortDataByCol')>=0){db.title=L.colSortTitle;db.textContent=L.colSortLabel;}else if(fn.indexOf('invertData')>=0){db.title=L.invertTitle;db.textContent=L.invertLabel;}else if(fn.indexOf('shuffleData')>=0){db.title=L.shuffleTitle;db.textContent=L.shuffleLabel;}else if(fn.indexOf('removeDataDuplicates')>=0){db.title=L.dedupTitle;db.textContent=L.dedupLabel;}}
+  // Result action buttons
+  var rbtns=d.querySelectorAll('#resultsPanel .dashboard .btn-ghost');for(var i=0;i<rbtns.length;i++){var rb=rbtns[i],fn2=rb.getAttribute('onclick')||'';if(fn2.indexOf('sortResult()')>=0){rb.title=L.sortTitle;rb.textContent=L.sortLabel;}else if(fn2.indexOf('sortResultByCol')>=0){rb.title=L.colSortTitle;rb.textContent=L.colSortLabel;}else if(fn2.indexOf('invertResult')>=0){rb.title=L.invertTitle;rb.textContent=L.invertLabel;}else if(fn2.indexOf('shuffleResult')>=0){rb.title=L.shuffleTitle;rb.textContent=L.shuffleLabel;}else if(fn2.indexOf('removeResultDuplicates')>=0){rb.title=L.dedupTitle;rb.textContent=L.dedupLabel;}else if(fn2.indexOf('copyResult')>=0){rb.title=L.copyTitle;if(rb.textContent.indexOf('✅')===-1)rb.textContent=L.copyLabel;}}
+  // Separators
+  var seps=d.querySelector('.separators');if(seps){var spans=seps.querySelectorAll('span');if(spans[0])spans[0].textContent=L.colLabel+': ';if(spans[2])spans[2].textContent=L.rowLabel+': ';var colRx=d.querySelector('#chkColRegex');var rowRx=d.querySelector('#chkRowRegex');if(colRx){var cl=colRx.parentNode;cl.childNodes[1]&&(cl.childNodes[1].textContent=L.regexLabel);cl.title=L.regexTitle;}if(rowRx){var rl=rowRx.parentNode;rl.childNodes[1]&&(rl.childNodes[1].textContent=L.regexLabel);rl.title=L.regexTitle;}}
+  // Snippet dropdown (static options)
+  var sOpts=d.querySelectorAll('#selectSnippet option:not(.custom-snippet)');var labels=[L.snippetRowNum,L.snippetRowNumOne,L.snippetRow,L.snippetNumRows,L.snippetUpper,L.snippetLower,L.snippetPascal,L.snippetCamel,L.snippetSentence,L.snippetSnake,L.snippetKebab,L.snippetTitle,L.snippetWords,L.snippetReverse,L.snippetCondFirst,L.snippetCondLast,L.snippetHtmlUl,L.snippetHtmlTable,L.snippetHtmlTableHdr];for(var i=0;i<Math.min(sOpts.length-1,labels.length);i++){sOpts[i+1].textContent=labels[i];}
+  // My Patterns separator
+  refreshSnippetDropdown();
+}
+
+function $(id) { return document.getElementById(id); }
+
+// ── Delimiter conversion ──
+function interpret(s) { return s.replace(/\\r/g,'\r').replace(/\\n/g,'\n').replace(/\\t/g,'\t'); }
+function unterpret(s) { return s.replace(/\r/g,'\\r').replace(/\n/g,'\\n').replace(/\t/g,'\\t'); }
+
+function detectNativeDelimiter() {
+  var el = document.createElement('textarea');
+  el.value = "\r\n";
+  return el.value;
+}
+
+// ── SPLIT BY (regex-aware) ──
+function splitBy(str, delim, isRegex) {
+  if (!isRegex) return str.split(delim);
+  try {
+    var re = new RegExp(delim);
+    return str.split(re);
+  } catch (e) {
+    $('fieldDelim').classList.add('error');
+    $('rowDelim').classList.add('error');
+    return str.split(delim);
+  }
+}
+
+// ── RFC 4180 CSV STATE MACHINE ──
+function parseCSV(text, delim) {
+  var rows = [], row = [], field = '';
+  var inQuotes = false, i = 0, n = text.length;
+  while (i < n) {
+    var ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (i + 1 < n && text[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else { field += ch; }
+    } else {
+      if (ch === '"' && field.length === 0) { inQuotes = true; }
+      else if (ch === delim) { row.push(field); field = ''; }
+      else if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else if (ch === '\r') {
+        if (i + 1 < n && text[i + 1] === '\n') i++;
+        row.push(field); rows.push(row); row = []; field = '';
+      } else { field += ch; }
+    }
+    i++;
+  }
+  if (field !== '' || row.length > 0) { row.push(field); rows.push(row); }
+  // Clean empty trailing row
+  if (rows.length > 0 && rows[rows.length - 1].length === 1 && rows[rows.length - 1][0] === '') rows.pop();
+  return rows;
+}
+
+function showCount(panel, len, prev) {
+  var pl = len === 1 ? "" : "s";
+  var msg = len + " row" + pl;
+  if (prev !== undefined) { var pl2 = prev === 1 ? "" : "s"; msg = prev + " → " + msg; }
+  $('stats' + panel).textContent = msg;
+}
+
+// ── STRING/ARRAY PROTOTYPES ──
+(function() {
+  var S = String.prototype, A = Array.prototype;
+
+  if (!A.clean) A.clean = function(blankToo) {
+    var r=[];
+    if(blankToo){
+      for(var i=0;i<this.length;i++){
+        var v=this[i];
+        if(v!==""&&v!==null&&v.trim()!=="")r.push(v);
+      }
+    } else {
+      for(var j=0;j<this.length;j++){
+        var w=this[j];
+        if(w!==""&&w!==null)r.push(w);
+      }
+    }
+    this.length=0;
+    for(var k=0;k<r.length;k++)this.push(r[k]);
+    return this;
+  };
+
+  if (!S.reverse) S.reverse = function() { return this.split("").reverse().join(""); };
+
+  if (!S.toCamelCase) S.toCamelCase = function() {
+    var s = this.replace(/([A-Z]+)/g,function(m,l){return l[0].toUpperCase()+l.slice(1).toLowerCase();}).replace(/[\-_\s](.)/g,function(m,l){return l.toUpperCase();});
+    return s[0].toLowerCase() + s.slice(1);
+  };
+  if (!S.toPascalCase) S.toPascalCase = function() {
+    var s = this.replace(/([A-Z]+)/g,function(m,l){return l[0].toUpperCase()+l.slice(1).toLowerCase();}).replace(/[\-_\s](.)/g,function(m,l){return l.toUpperCase();});
+    return s[0].toUpperCase() + s.slice(1);
+  };
+  if (!S.toWords) S.toWords = function() { return this.replace(/([a-z])([A-Z])/gm,"$1 $2"); };
+  if (!S.toSnakeCase) S.toSnakeCase = function() { return this.toLowerCase().replace(/ /gm,"_"); };
+  if (!S.toKebabCase) S.toKebabCase = function() { return this.toLowerCase().replace(/ /gm,"-"); };
+  if (!S.ltrim) S.ltrim = function() { return this.replace(/^\s+/gm,''); };
+  if (!S.rtrim) S.rtrim = function() { return this.replace(/\s+$/gm,''); };
+  if (!S.trim) S.trim = function() { return this.replace(/^\s+|\s+$/g,''); };
+  if (!S.ltrimCrLf) S.ltrimCrLf = function() { return this.replace(/^\r/g,'').replace(/^\n/g,''); };
+  if (!S.rtrimCrLf) S.rtrimCrLf = function() { return this.replace(/\n$/g,'').replace(/\r$/g,''); };
+  if (!S.toSentenceCase) S.toSentenceCase = function() { return this[0].toUpperCase() + this.slice(1); };
+  if (!S.toTitleCase) S.toTitleCase = function() {
+    var st = this.split(" ");
+    for (var i = 0; i < st.length; i++) st[i] = st[i].toSentenceCase();
+    return st.join(" ");
+  };
+  if (!S.left) S.left = function(n) { return this.substr(0, n); };
+  if (!S.right) S.right = function(n) { return this.slice(-n); };
+  if (!S.lpad) S.lpad = function(len,ch) { ch=ch||" "; var s=String(this); if(len<=s.length)return s.left(len); while(s.length<len)s=ch+s; return s; };
+  if (!S.rpad) S.rpad = function(len,ch) { ch=ch||" "; var s=String(this); if(len<=s.length)return s.left(len); while(s.length<len)s+=ch; return s; };
+  if (!A.unique) A.unique = function() {
+    var seen={},r=[];
+    for(var i=0;i<this.length;i++){
+      if(!seen.hasOwnProperty(this[i])){seen[this[i]]=true;r.push(this[i]);}
+    }
+    return r;
+  };
+  if (!S.htmlEncode) S.htmlEncode = function(){ return this.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+  if (!S.htmlDecode) S.htmlDecode = function(){ return this.replace(/&gt;/g,'>').replace(/&lt;/g,'<').replace(/&quot;/g,'"').replace(/&amp;/g,'&'); };
+  if (!S.urlEncode) S.urlEncode = function(){ return encodeURIComponent(this); };
+  if (!S.urlDecode) S.urlDecode = function(){ return decodeURIComponent(this); };
+  if (!S.xmlEncode) S.xmlEncode = function(){ return this.replace(/&/g,'&amp;').replace(/>/g,'&gt;').replace(/</g,'&lt;').replace(/'/g,'&apos;').replace(/"/g,'&quot;'); };
+  if (!S.xmlDecode) S.xmlDecode = function(){ return this.replace(/&gt;/g,'>').replace(/&lt;/g,'<').replace(/&apos;/g,"'").replace(/&quot;/g,'"').replace(/&amp;/g,'&'); };
+  if (!S.toVowelCase) S.toVowelCase = function(){ return this.replace(/[aeiou]/gi,function(c){return c.toUpperCase();}); };
+  if (!S.toRandomCase) S.toRandomCase = function(){ return this.replace(/[a-z]/gi,function(c){return Math.random()<.5?c.toLowerCase():c.toUpperCase();}); };
+  if (!S.toTrainCase) S.toTrainCase = function(){ return this.toTitleCase().replace(/ /g,'-'); };
+  if (!S.wordWrap) S.wordWrap = function(len) {
+    len=len||80; var s=String(this),res='',nl='\n';
+    while(s.length>len){var f=false;for(var i=len-1;i>=0;i--){if(/\s/.test(s.charAt(i))){res+=s.slice(0,i)+nl;s=s.slice(i+1);f=true;break;}}if(!f){res+=s.slice(0,len)+nl;s=s.slice(len);}}
+    return res+s;
+  };
+  if (!S.toNetFromSql) S.toNetFromSql = function(){
+    var m={'varchar':'string','nvarchar':'string','char':'string','int':'int','bigint':'long','smallint':'short','bit':'bool','datetime':'DateTime','decimal':'decimal','float':'double','real':'float','uniqueidentifier':'Guid','xml':'string'};
+    return m[this.toLowerCase()]||this;
+  };
+})();
+
+// ── DATEFORMAT ──
+var dateFormat = (function() {
+  var token = /d{1,4}|m{1,4}|yy(?:yy)?|([HhMsTt])\1?|[LloSZ]|"[^"]*"|'[^']*'/g,
+    timezone = /\b(?:[PMCEA][SDP]T|(?:Pacific|Mountain|Central|Eastern|Atlantic) (?:Standard|Daylight|Prevailing) Time|(?:GMT|UTC)(?:[-+]\d{4})?)\b/g,
+    timezoneClip = /[^-+\dA-Z]/g,
+    pad = function(val,len){val=String(val);len=len||2;while(val.length<len)val="0"+val;return val;};
+  return function(date,mask,utc){
+    var dF=dateFormat;
+    if(arguments.length===1&&Object.prototype.toString.call(date)==="[object String]"&&!/\d/.test(date)){mask=date;date=undefined;}
+    date=date?new Date(date):new Date;if(isNaN(date))throw SyntaxError("invalid date");
+    mask=String(dF.masks[mask]||mask||dF.masks["default"]);
+    if(mask.slice(0,4)==="UTC:"){mask=mask.slice(4);utc=true;}
+    var _=utc?"getUTC":"get",d=date[_+"Date"](),D=date[_+"Day"](),m=date[_+"Month"](),y=date[_+"FullYear"](),H=date[_+"Hours"](),M=date[_+"Minutes"](),s=date[_+"Seconds"](),L=date[_+"Milliseconds"](),o=utc?0:date.getTimezoneOffset(),
+      flags={d:d,dd:pad(d),ddd:dF.i18n.dayNames[D],dddd:dF.i18n.dayNames[D+7],m:m+1,mm:pad(m+1),mmm:dF.i18n.monthNames[m],mmmm:dF.i18n.monthNames[m+12],yy:String(y).slice(2),yyyy:y,h:H%12||12,hh:pad(H%12||12),H:H,HH:pad(H),M:M,MM:pad(M),s:s,ss:pad(s),l:pad(L,3),L:pad(L>99?Math.round(L/10):L),t:H<12?"a":"p",tt:H<12?"am":"pm",T:H<12?"A":"P",TT:H<12?"AM":"PM",Z:utc?"UTC":(String(date).match(timezone)||[""]).pop().replace(timezoneClip,""),o:(o>0?"-":"+")+pad(Math.floor(Math.abs(o)/60)*100+Math.abs(o)%60,4),S:["th","st","nd","rd"][d%10>3?0:(d%100-d%10!==10)*d%10]};
+    return mask.replace(token,function($0){return $0 in flags?flags[$0]:$0.slice(1,-1);});
+  };
+})();
+dateFormat.masks={"default":"ddd mmm dd yyyy HH:MM:ss",shortDate:"m/d/yy",mediumDate:"mmm d, yyyy",longDate:"mmmm d, yyyy",fullDate:"dddd, mmmm d, yyyy",shortTime:"h:MM TT",mediumTime:"h:MM:ss TT",longTime:"h:MM:ss TT Z",isoDate:"yyyy-mm-dd",isoTime:"HH:MM:ss",isoDateTime:"yyyy-mm-dd'T'HH:MM:ss",isoUtcDateTime:"UTC:yyyy-mm-dd'T'HH:MM:ss'Z'"};
+dateFormat.i18n={dayNames:["Sun","Mon","Tue","Wed","Thu","Fri","Sat","Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],monthNames:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","January","February","March","April","May","June","July","August","September","October","November","December"]};
+if(!Date.prototype.format)Date.prototype.format=function(m,utc){return dateFormat(this,m,utc);};
+if(!String.prototype.format)String.prototype.format=function(m,utc){return dateFormat(new Date(this),m,utc);};
+if(!String.prototype.dateFormat)String.prototype.dateFormat=function(m,utc){return dateFormat(new Date(this),m,utc);};
+
+var MONTH_NAMES=["January","February","March","April","May","June","July","August","September","October","November","December"];
+var MONTH_ABBR=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function toDate(str,fmt){
+  if(!str||!fmt)return new Date(NaN);
+  var tokens={'yyyy':'(\\d{4})','yy':'(\\d{2})','MMMM':'('+MONTH_NAMES.join('|')+')','MMM':'('+MONTH_ABBR.join('|')+')','MM':'(\\d{2})','M':'(\\d{1,2})','dd':'(\\d{2})','d':'(\\d{1,2})','HH':'(\\d{2})','H':'(\\d{1,2})','hh':'(\\d{2})','h':'(\\d{1,2})','mm':'(\\d{2})','m':'(\\d{2})','ss':'(\\d{2})','s':'(\\d{2})','tt':'(am|pm|AM|PM)','t':'(a|p|A|P)'};
+  var keys=Object.keys(tokens).sort(function(a,b){return b.length-a.length;});
+  var reStr='',tokenList=[],i=0;
+  while(i<fmt.length){var matched=false;for(var k=0;k<keys.length;k++){if(fmt.substr(i,keys[k].length)===keys[k]){reStr+=tokens[keys[k]];tokenList.push(keys[k]);i+=keys[k].length;matched=true;break;}}if(!matched){reStr+='\\'+fmt[i];i++;}}
+  var re=new RegExp('^'+reStr+'$'),m=str.match(re);
+  if(!m)return new Date(NaN);
+  var y=1970,M=0,d=1,H=0,mi=0,s=0,isPM=false;
+  for(var j=0;j<tokenList.length;j++){var tk=tokenList[j],val=m[j+1];
+    if(tk==='yyyy')y=parseInt(val,10);else if(tk==='yy')y=2000+parseInt(val,10);
+    else if(tk==='MMMM'||tk==='MMM'){for(var n=0;n<12;n++){if(MONTH_NAMES[n].toLowerCase()===val.toLowerCase()||MONTH_ABBR[n].toLowerCase()===val.toLowerCase()){M=n;break;}}}
+    else if(tk==='MM'||tk==='M')M=parseInt(val,10)-1;else if(tk==='dd'||tk==='d')d=parseInt(val,10);
+    else if(tk==='HH'||tk==='H')H=parseInt(val,10);else if(tk==='hh'||tk==='h'){H=parseInt(val,10);if(H===12)H=0;}
+    else if(tk==='mm'||tk==='m')mi=parseInt(val,10);else if(tk==='ss'||tk==='s')s=parseInt(val,10);
+    else if(tk==='tt'||tk==='t')isPM=val.toLowerCase().charAt(0)==='p';
+  }
+  if(isPM)H+=12;
+  return new Date(y,M,d,H,mi,s);
+}
+function reFormatDate(input,fm,to){var d=toDate(input,fm);if(isNaN(d))return'Invalid date';return dateFormat(d,to);}
+function newGuid(){return'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16);});}
+if(!String.prototype.toDate)String.prototype.toDate=function(fmt){return toDate(this.toString(),fmt);};
+if(!String.prototype.reFormatDate)String.prototype.reFormatDate=function(fm,to){return reFormatDate(this.toString(),fm,to);};
+
+// ── PATTERN PRE-COMPILATION ──
+function compileBlocks(pattern, headers) {
+  var blocks=[], re=/<%([\s\S]*?)%>/g, m;
+  while((m=re.exec(pattern))!==null){
+    var code=m[1];
+    code=code.replace(/\$rowDelim/ig,'(rowDelim)');
+    code=code.replace(/\$rownumOne/ig,'(rowNum+1)');
+    code=code.replace(/\$rownum/ig,'(rowNum)');
+    code=code.replace(/\$row/ig,'(row)');
+    code=code.replace(/\$numrows/ig,'(numRows)');
+    code=code.replace(/\$numfields/ig,'(fields.length)');
+    code=code.replace(/\$colDelim/ig,'(fieldDelim)');
+    code=code.replace(/\$h(0|[1-9]\d*)/gi,function(_,n){return'(('+(trimFields?'('+JSON.stringify(headers[+n])+').trim()':JSON.stringify(headers[+n]))+'))';});
+    code=code.replace(/\$\-(0|[1-9]\d*)/g,function(_,n){return'(fields[fields.length-'+n+']'+(trimFields?'.trim()':'')+')';});
+    code=code.replace(/\$(0|[1-9]\d*)/g,function(_,n){return'(fields['+n+']'+(trimFields?'.trim()':'')+')';});
+    code=code.replace(/\$lt;/ig,'<').replace(/\$gt;/ig,'>').replace(/\$percent;/ig,'%').replace(/\$dollar;/ig,'$');
+    blocks.push({m:m[0],c:code});
+  }
+  return blocks;
+}
+
+// ── CORE ENGINE ──
+function apply(pattern, row, fieldDelim, rowNum, numRows, dataRows, rowDelim, fullPattern, cache, csvFields, csvHeaders) {
+  var headers;
+  if (csvFields && rowNum === 0) { headers = csvFields; }
+  else if (csvHeaders) { headers = csvHeaders; }
+  else { headers = dataRows.length > 0 ? splitBy(dataRows[0], fieldDelim, columnDelimiterIsRegex) : []; }
+  var fields = csvFields || splitBy(row, fieldDelim, columnDelimiterIsRegex);
+  if (ignoreEmptyFields) fields = fields.clean(trimFields);
+  var result = pattern;
+
+  var blocks;
+  if (cache && cache[pattern]) { blocks = cache[pattern]; }
+  else { blocks = compileBlocks(pattern, headers); if (cache) cache[pattern] = blocks; }
+
+  for (var i = 0; i < blocks.length; i++) {
+    var b = blocks[i], val;
+    try {
+      var fn = new Function('rowDelim','rowNum','row','numRows','fields','fieldDelim','headers','trimFields','"use strict";return (' + b.c + ')');
+      val = fn(rowDelim, rowNum, row, numRows, fields, fieldDelim, headers, trimFields);
+    } catch (errExpr) {
+      try {
+        val = eval(b.c);
+      } catch (errEval) {
+        val = '\n[block ' + i + '] 表達式錯誤';
+        console.error('Expression error [' + b.m + ']:', errEval.message || errEval);
+      }
+    }
+    if (val === null || val === undefined) val = '';
+    result = result.replace(b.m, val);
+  }
+
+  result = result.replace(/\$rowDelim/ig, rowDelim).replace(/\$rownumOne/ig, rowNum + 1).replace(/\$rownum/ig, rowNum).replace(/\$row/ig, row).replace(/\$numrows/ig, numRows).replace(/\$numfields/ig, fields.length).replace(/\$colDelim/ig, fieldDelim);
+  result = result.replace(/\$(0|[1-9]\d*)/g, function(_, n) { return fields[n] !== undefined ? (trimFields ? fields[n].trim() : fields[n]) : '$' + n; });
+  result = result.replace(/\$\-(0|[1-9]\d*)/g, function(_, n) { var idx = fields.length - n; return fields[idx] !== undefined ? (trimFields ? fields[idx].trim() : fields[idx]) : '$-' + n; });
+  result = result.replace(/\$h(0|[1-9]\d*)/gi, function(_, n) { return headers[n] !== undefined ? (trimFields ? headers[n].trim() : headers[n]) : '$h' + n; });
+  result = result.replace(/\$lt;/ig, '<').replace(/\$gt;/ig, '>').replace(/\$percent;/ig, '%').replace(/\$dollar;/ig, '$');
+  return result;
+}
+
+function reverseEngineerPattern(pattern,data,result,firstRow,fieldDelim){
+  if(pattern.trim()!=="")return false;if(data.trim()==="")return false;if(result.trim()==="")return false;
+  var fields=firstRow.split(fieldDelim);if(ignoreEmptyFields)fields=fields.clean(trimFields);
+  var pat=result;
+  pat=pat.replace(/\$/g,function(){return"$dollar;";}).replace(/<%/g,function(){return"$lt;%";}).replace(/%>/g,function(){return"%$gt;";});
+  function esc(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+  for(var i=0;i<fields.length;i++){var v=trimFields?fields[i].trim():fields[i];if(!v)continue;
+    pat=pat.replace(new RegExp(esc(v),'g'),function(){return"$"+i;});
+    var cases=[[v.toLowerCase(),'toLowerCase'],[v.toUpperCase(),'toUpperCase'],[v.toPascalCase(),'toPascalCase'],[v.toCamelCase(),'toCamelCase'],[v.toSentenceCase(),'toSentenceCase'],[v.toTitleCase(),'toTitleCase'],[v.toSnakeCase(),'toSnakeCase'],[v.toKebabCase(),'toKebabCase'],[v.toWords(),'toWords']];
+    for(var c=0;c<cases.length;c++){var cv=cases[c][0],cf=cases[c][1];if(v!==cv&&cv)pat=pat.replace(new RegExp(esc(cv),'g'),function(){return"<% $"+i+"."+cf+"() %>";});}
+  }
+  $('txtPattern').value=pat;auto();return true;
+}
+
+function calculate(data,pattern,filter,rowDelim,fieldDelim,outParam){
+  var eachDelim=/\$EACH/i,onceDelim=/\$ONCE/i;
+  var dataRows,csvParsed=null;
+  if(csvMode){
+    csvParsed=parseCSV(data,fieldDelim);
+    dataRows=csvParsed.map(function(f){return f.join(fieldDelim);});
+    // Warn on inconsistent column counts
+    if(csvParsed.length>1){
+      var colCount=csvParsed[0].length,inconsistent=false;
+      for(var ci=1;ci<csvParsed.length;ci++){if(csvParsed[ci].length!==colCount){inconsistent=true;break;}}
+      if(inconsistent)console.warn('CSV: inconsistent column counts detected');
+    }
+  } else {
+    dataRows=splitBy(data,rowDelim,rowDelimiterIsRegex);
+  }
+  if(ignoreEmptyRows){
+    if(csvMode&&csvParsed){
+      var cleanRows=[],cleanCSV=[];
+      for(var ri=0;ri<dataRows.length;ri++){
+        var v=dataRows[ri];
+        if(v!==""&&v!==null&&v.trim()!==""){cleanRows.push(v);cleanCSV.push(csvParsed[ri]);}
+      }
+      dataRows=cleanRows;csvParsed=cleanCSV;
+    } else {
+      dataRows=dataRows.clean(trimFields);
+    }
+  }
+  var numRows=dataRows.length;
+  if(autoPreview&&numRows>1000){autoPreview=false;$('chkAuto').checked=false;}
+  if(!autoPreview&&reverseEngineerPattern(pattern,data,$('txtResults').value,dataRows[0]||'',fieldDelim)){outParam.numRows=numRows;return $('txtResults').value;}
+  var csvHeaders=csvMode&&csvParsed&&csvParsed.length>0?csvParsed[0]:null;
+  if(isFiltering&&filter&&filter.trim()!==''){
+    var filteredRows=[],filteredCSV=csvParsed?[]:null,filterCache={};
+    var filterPattern='<% '+filter+' %>';
+    for(var fi=0;fi<dataRows.length;fi++){
+      try{
+        var filterCode=apply(filterPattern,dataRows[fi],fieldDelim,fi,numRows,dataRows,rowDelim,pattern,filterCache,csvParsed?csvParsed[fi]:null,csvHeaders);
+        var filterFn=new Function('"use strict";return ('+filterCode+')');
+        if(filterFn()){filteredRows.push(dataRows[fi]);if(filteredCSV)filteredCSV.push(csvParsed[fi]);}
+      }catch(e){}
+    }
+    dataRows=filteredRows;if(filteredCSV)csvParsed=filteredCSV;
+    numRows=dataRows.length;
+  }
+  showCount("Data",dataRows.length);
+  var patterns=pattern.split(eachDelim),resultParts=[],applyCache={};
+  for(var iPat=0;iPat<patterns.length;iPat++){
+    var start=0,inner=patterns[iPat].split(onceDelim)[0].ltrimCrLf().rtrimCrLf();
+    if(inner.length>0){if(inner[0]==='+'){inner=inner.slice(1).ltrimCrLf();start=1;}
+      for(var i=start;i<numRows;i++){resultParts.push(apply(inner,dataRows[i],fieldDelim,i,numRows,dataRows,rowDelim,pattern,applyCache,csvParsed?csvParsed[i]:null,csvHeaders));if(addLineSep)resultParts.push('\n');}
+    }
+    var stopParts=patterns[iPat].split(onceDelim);
+    for(var j=1;j<stopParts.length;j++){resultParts.push(apply(stopParts[j].ltrimCrLf(),dataRows[0]||'',fieldDelim,0,numRows,dataRows,rowDelim,pattern,applyCache,csvParsed?csvParsed[0]:null,csvHeaders));}
+  }
+  var result=resultParts.join('');
+  outParam.numRows=numRows;showCount("Results",result.split('\n').clean(true).length);
+  return result;
+}
+
+// ── MAIN ACTIONS ──
+function go(){
+  try{
+    var rowDelim=interpret($('rowDelim').value),fieldDelim=interpret($('fieldDelim').value);
+    var data=$('txtData').value,pattern=$('txtPattern').value;
+    $('rowDelim').classList.remove('error');$('fieldDelim').classList.remove('error');
+    $('statsData').style.color='';
+    if(columnDelimiterIsRegex||rowDelimiterIsRegex){
+      try{if(columnDelimiterIsRegex)new RegExp(fieldDelim);if(rowDelimiterIsRegex)new RegExp(rowDelim);}catch(e){
+        $('fieldDelim').classList.add('error');$('rowDelim').classList.add('error');
+        $('txtResults').value='[Regex Error] '+(e.message||e);return;
+      }
+    }
+    var out={numRows:0},filter=isFiltering?$('txtFilter').value:null;
+    $('txtResults').value=calculate(data,pattern,filter,rowDelim,fieldDelim,out);
+  }catch(err){console.error(err);}
+}
+
+function auto(){
+  if(!autoPreview||!ready)return;
+  clearTimeout(_debounceTimer);
+  _debounceTimer=setTimeout(function(){
+    if(autoCalculationInProgress)return;autoCalculationInProgress=true;
+    go();
+    autoCalculationInProgress=false;
+  },150);
+}
+
+function setauto(){autoPreview=$('chkAuto').checked;auto();}
+function toggleFilter(){isFiltering=$('chkFilter').checked;$('filterPanel').style.display=isFiltering?'flex':'none';auto();}
+function toggleCollapse(){
+  collapseMode=$('chkCollapse').checked;
+  var panels=document.querySelectorAll('.panel-wrap');
+  for(var i=0;i<panels.length;i++){
+    if(collapseMode&&panels[i].id!=='dataPanel'&&panels[i].id!=='resultsPanel')panels[i].style.display='none';
+    else if(panels[i].id==='filterPanel'&&!isFiltering)panels[i].style.display='none';
+    else panels[i].style.display='flex';
+  }
+  auto();
+}
+
+// ── SNIPPETS ──
+function insertAtCursor(field,value){
+  if(field.selectionStart||field.selectionStart===0){var start=field.selectionStart,end=field.selectionEnd;field.value=field.value.slice(0,start)+value+field.value.slice(end);field.selectionStart=field.selectionEnd=start+value.length;field.focus();}
+  else field.value+=value;
+  auto();
+}
+function insertsnippet(sel){var v=sel.value;sel.selectedIndex=0;if(!v||v==='NULL'||v==='addYourOwn')return;insertAtCursor($('txtPattern'),v);}
+
+var STORAGE_KEY='dataweave_snippets';
+function loadSnippets(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||[];}catch(e){return[];}}
+function saveSnippets(list){localStorage.setItem(STORAGE_KEY,JSON.stringify(list));refreshSnippetDropdown();}
+function saveSnippet(){
+  var pattern=$('txtPattern').value.trim();
+  if(!pattern){alert(t('saveEmpty'));return;}
+  var name=prompt(t('savePrompt'),pattern.split('\n')[0].slice(0,40));
+  if(!name||!name.trim())return;
+  var list=loadSnippets();
+  list.unshift({name:name.trim(),pattern:pattern,date:new Date().toISOString().slice(0,10)});
+  saveSnippets(list);
+}
+function deleteSnippet(index){if(!confirm(t('delConfirm')))return;var list=loadSnippets();list.splice(index,1);saveSnippets(list);showSnippets();}
+function loadSnippetByIndex(index){var list=loadSnippets();if(list[index]){$('txtPattern').value=list[index].pattern;auto();var o=document.getElementById('snippetsOverlay');if(o)o.parentNode.removeChild(o);}}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function showSnippets(){
+  var list=loadSnippets();
+  if(list.length===0){alert(t('noSnippets'));return;}
+  var existing=document.getElementById('snippetsOverlay');if(existing)existing.parentNode.removeChild(existing);
+  var overlay=document.createElement('div');overlay.id='snippetsOverlay';overlay.className='overlay';
+  overlay.onclick=function(e){if(e.target===overlay)overlay.parentNode.removeChild(overlay);};
+  var modal=document.createElement('div');modal.className='modal';
+  modal.innerHTML='<div class="modal-header"><h2>'+t('savedPatterns')+'</h2><button class="modal-close">&times;</button></div><div class="modal-body" id="snippetList"></div><div class="modal-footer">'+list.length+t('savedFooter')+'</div>';
+  overlay.appendChild(modal);document.body.appendChild(overlay);
+  modal.querySelector('.modal-close').onclick=function(){overlay.parentNode.removeChild(overlay);};
+  var listDiv=document.getElementById('snippetList');
+  for(var i=0;i<list.length;i++){(function(idx){
+    var item=document.createElement('div');item.className='snippet-item';
+    var preview=list[idx].pattern.replace(/\n/g,' ↵ ').slice(0,80);
+    var left=document.createElement('div');left.style.cssText='flex:1;min-width:0;';
+    left.innerHTML='<div class="name">'+escHtml(list[idx].name)+'</div><div class="preview">'+escHtml(preview)+'</div><div class="date">'+escHtml(list[idx].date||'')+'</div>';
+    left.onclick=function(){loadSnippetByIndex(idx);};
+    item.appendChild(left);
+    var del=document.createElement('button');del.className='snippet-del';del.textContent='×';del.title='Delete';
+    del.onclick=function(e){e.stopPropagation();deleteSnippet(idx);};
+    item.appendChild(del);listDiv.appendChild(item);
+  })(i);}
+}
+
+function refreshSnippetDropdown(){
+  var sel=$('selectSnippet');
+  for(var i=sel.options.length-1;i>=0;i--){if(sel.options[i].className==='custom-snippet')sel.remove(i);}
+  var list=loadSnippets();
+  if(list.length>0){
+    var sep=document.createElement('option');sep.disabled=true;    sep.textContent=t('myPatterns');sep.className='custom-snippet';sel.add(sep);
+    for(var i=0;i<list.length;i++){var opt=document.createElement('option');opt.value=list[i].pattern;opt.textContent=list[i].name.length>35?list[i].name.slice(0,35)+'…':list[i].name;opt.title=list[i].name+'\n'+list[i].date;opt.className='custom-snippet';sel.add(opt);}
+  }
+}
+
+// ── DATA/RESULT MANIPULATION ──
+// Data operations: work on raw rows. Result operations: reorder data then recalculate.
+function getRows(target){var rowDelim=interpret($('rowDelim').value);return splitBy($('txt'+target).value,rowDelim,rowDelimiterIsRegex).clean(trimFields);}
+function setRows(target,rows){var rowDelim=interpret($('rowDelim').value);$('txt'+target).value=rows.join(rowDelim);if(target==='Data')auto();}
+
+function sortControl(target){var rows=getRows(target);showCount(target,rows.length);rows.sort(function(a,b){var na=isNaN(a),nb=isNaN(b);if(!na&&!nb)return a-b;if(na&&nb){a=a.toLowerCase();b=b.toLowerCase();return a<b?-1:a>b?1:0;}return na?1:-1;});setRows(target,rows);}
+function sortData(){sortControl('Data');}
+function sortResult(){sortData();}
+
+function sortControlByCol(target){var col=parseInt(prompt(t('sortPrompt'),'0'),10);if(isNaN(col)||col<0)return;var fieldDelim=interpret($('fieldDelim').value);var rows=getRows(target);showCount(target,rows.length);rows.sort(function(a,b){var af=a.split(fieldDelim),bf=b.split(fieldDelim),av=(af[col]||'').trim(),bv=(bf[col]||'').trim(),na=isNaN(av),nb=isNaN(bv);if(!na&&!nb)return av-bv;if(na&&nb){av=av.toLowerCase();bv=bv.toLowerCase();return av<bv?-1:av>bv?1:0;}return na?1:-1;});setRows(target,rows);}
+function sortDataByCol(){sortControlByCol('Data');}
+function sortResultByCol(){sortDataByCol();}
+
+function invertControl(target){var rows=getRows(target);showCount(target,rows.length);setRows(target,rows.reverse());}
+function invertData(){invertControl('Data');}
+function invertResult(){invertData();}
+
+function shuffleControl(target){var rows=getRows(target);showCount(target,rows.length);rows.sort(function(){return 0.5-Math.random();});setRows(target,rows);}
+function shuffleData(){shuffleControl('Data');}
+function shuffleResult(){shuffleData();}
+
+function removeDuplicatesControl(target){var rows=getRows(target),uniques=rows.unique();showCount(target,uniques.length,rows.length);setRows(target,uniques);}
+function removeDataDuplicates(){removeDuplicatesControl('Data');}
+function removeResultDuplicates(){removeDataDuplicates();}
+function downloadResult(){var text=$('txtResults').value,blob=new Blob([text],{type:'text/plain'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='dataweave_results.txt';a.click();URL.revokeObjectURL(a.href);}
+function exportProject(){
+  var project={
+    v:1,
+    data:$('txtData').value,
+    pattern:$('txtPattern').value,
+    col:$('fieldDelim').value,
+    row:$('rowDelim').value,
+    csv:csvMode,
+    colRx:columnDelimiterIsRegex,
+    rowRx:rowDelimiterIsRegex
+  };
+  var json=JSON.stringify(project,null,2);
+  var blob=new Blob([json],{type:'application/json'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  var ts=new Date().toISOString().replace(/:/g,'-').replace(/\..+/,'');
+  a.download='dataweave_'+ts+'.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function importProject(input){
+  var file=input.files[0];
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var project=JSON.parse(e.target.result);
+      if(project.data!==undefined)$('txtData').value=project.data;
+      if(project.pattern!==undefined)$('txtPattern').value=project.pattern;
+      if(project.col!==undefined)$('fieldDelim').value=project.col;
+      if(project.row!==undefined)$('rowDelim').value=project.row;
+      if(project.csv!==undefined){csvMode=project.csv;$('chkCsvMode').checked=csvMode;}
+      if(project.colRx!==undefined){columnDelimiterIsRegex=project.colRx;$('chkColRegex').checked=columnDelimiterIsRegex;}
+      if(project.rowRx!==undefined){rowDelimiterIsRegex=project.rowRx;$('chkRowRegex').checked=rowDelimiterIsRegex;}
+      go();
+    }catch(err){alert('匯入失敗：'+err.message);}
+  };
+  reader.readAsText(file);
+  input.value='';
+}
+function copyResult(){
+  var text=$('txtResults').value;
+  if(!text){return;}
+  navigator.clipboard.writeText(text).then(function(){
+    var btn=$('copyBtn');
+    btn.textContent=t('copiedLabel');
+    setTimeout(function(){btn.textContent=t('copyLabel');},1500);
+  }).catch(function(){
+    var ta=$('txtResults');
+    ta.select();ta.setSelectionRange(0,99999);
+    document.execCommand('copy');
+    var btn=$('copyBtn');
+    btn.textContent=t('copiedLabel');
+    setTimeout(function(){btn.textContent=t('copyLabel');},1500);
+  });
+}
+
+// ── LOAD URL ──
+function loadQueryString(){
+  var p=new URLSearchParams(window.location.search);
+  if(p.has('data'))$('txtData').value=p.get('data');
+  if(p.has('pattern'))$('txtPattern').value=p.get('pattern');
+  if(p.has('col'))$('fieldDelim').value=p.get('col');
+  if(p.has('row'))$('rowDelim').value=p.get('row');
+}
+
+// ── CLEAR ──
+function clearDefault(){
+  $('txtData').value='';$('txtPattern').value='';$('txtResults').value='';
+  auto();
+}
+
+// ── HELP ──
+var HELP_TABS={en:{
+'Keywords':'<h3>Column Tokens</h3><table><tr><td><code>$0 $1 $2...</code></td><td>Column by index (0-based)</td></tr><tr><td><code>$-1 $-2...</code></td><td>Column from right (-1 = last)</td></tr><tr><td><code>$h0 $h1...</code></td><td>Header row column</td></tr></table><h3>Row Tokens</h3><table><tr><td><code>$row</code></td><td>Entire current row</td></tr><tr><td><code>$rownum</code></td><td>Row number (0-based)</td></tr><tr><td><code>$rownumOne</code></td><td>Row number (1-based)</td></tr><tr><td><code>$numrows</code></td><td>Total data rows</td></tr><tr><td><code>$numfields</code></td><td>Fields in current row</td></tr></table><h3>Delimiter Tokens</h3><table><tr><td><code>$colDelim</code></td><td>Column delimiter</td></tr><tr><td><code>$rowDelim</code></td><td>Row delimiter</td></tr><tr><td><code>$pattern</code></td><td>Full pattern text</td></tr></table><h3>Escape</h3><table><tr><td><code>$dollar;</code> <code>$percent;</code> <code>$lt;</code> <code>$gt;</code></td><td>Literal $ % &lt; &gt;</td></tr></table><h3>Flow Control</h3><table><tr><td><code>$EACH</code></td><td>Repeat block for each row</td></tr><tr><td><code>$EACH+</code></td><td>Like $EACH but skip first row</td></tr><tr><td><code>$ONCE</code></td><td>Output block once</td></tr></table><h4>Example</h4><pre>$ONCE&lt;ul&gt;\n$EACH  &lt;li&gt;$0&lt;/li&gt;\n$ONCE&lt;/ul&gt;</pre><p style="font-size:0.88em;opacity:0.6;">Wraps each row in &lt;li&gt; with outer &lt;ul&gt; appearing once.</p>',
+'Functions':'<h3>Case Conversion</h3><table><tr><td><code>toUpperCase()</code></td><td>HELLO WORLD</td></tr><tr><td><code>toLowerCase()</code></td><td>hello world</td></tr><tr><td><code>toPascalCase()</code></td><td>HelloWorld</td></tr><tr><td><code>toCamelCase()</code></td><td>helloWorld</td></tr><tr><td><code>toSentenceCase()</code></td><td>Hello world</td></tr><tr><td><code>toTitleCase()</code></td><td>Hello World</td></tr><tr><td><code>toSnakeCase()</code></td><td>hello_world</td></tr><tr><td><code>toKebabCase()</code></td><td>hello-world</td></tr><tr><td><code>toTrainCase()</code></td><td>Hello-World</td></tr><tr><td><code>toVowelCase()</code></td><td>hEllO wOrld</td></tr><tr><td><code>toRandomCase()</code></td><td>HeLlo WoRLd</td></tr><tr><td><code>toWords()</code></td><td>Hello World (from PascalCase)</td></tr></table><h3>Trim & Pad</h3><table><tr><td><code>trim() ltrim() rtrim()</code></td><td>Remove whitespace</td></tr><tr><td><code>lpad(n,ch) rpad(n,ch)</code></td><td>Pad to length n (default space)</td></tr><tr><td><code>left(n) right(n)</code></td><td>First / last n chars</td></tr></table><h3>Encoding</h3><table><tr><td><code>htmlEncode() htmlDecode()</code></td><td>HTML entities</td></tr><tr><td><code>urlEncode() urlDecode()</code></td><td>URL percent encoding</td></tr><tr><td><code>xmlEncode() xmlDecode()</code></td><td>XML entities</td></tr></table><h3>Other</h3><table><tr><td><code>reverse()</code></td><td>Reverse string</td></tr><tr><td><code>replace(a,b)</code></td><td>JS replace (supports regex)</td></tr><tr><td><code>split(sep)</code></td><td>Split into array</td></tr><tr><td><code>repeat(n)</code></td><td>Repeat n times</td></tr><tr><td><code>wordWrap(n)</code></td><td>Wrap text at width n</td></tr><tr><td><code>toDate(fmt)</code></td><td>Parse date string with format</td></tr><tr><td><code>dateFormat(fmt)</code></td><td>Format date to string</td></tr><tr><td><code>reFormatDate(fm,to)</code></td><td>Convert date between formats</td></tr><tr><td><code>newGuid()</code></td><td>Random GUID (standalone)</td></tr></table>',
+'WHERE':'<h3>Filter Rows</h3><p>Toggle <b>filter</b> to show filter panel. Enter a JS expression returning <code>true</code>/<code>false</code>.</p><p>Variables: <code>$0..$n</code> <code>$row</code> <code>$rownum</code></p><h4>Examples</h4><table><tr><td><code>$rowNum > 0</code></td><td>Skip header row</td></tr><tr><td><code>$rowNum % 2 == 1</code></td><td>Odd rows only</td></tr><tr><td><code>$0 == \'guitar\'</code></td><td>Col 0 equals guitar</td></tr><tr><td><code>$0.match(/o/) != null</code></td><td>Col 0 contains "o"</td></tr><tr><td><code>$2 == \'guitar\' && $3 == 1940</code></td><td>Multi-condition</td></tr><tr><td><code>isNaN($3) == false</code></td><td>Col 3 is numeric</td></tr></table>',
+'Date':'<h3>Date Formatting & Parsing</h3><h4>Format Tokens</h4><table><tr><td><code>d dd ddd dddd</code></td><td>Day (1, 01, Mon, Monday)</td></tr><tr><td><code>m mm mmm mmmm</code></td><td>Month (1, 01, Jan, January)</td></tr><tr><td><code>yy yyyy</code></td><td>Year (23, 2023)</td></tr><tr><td><code>H HH</code></td><td>Hours 24h (0-23)</td></tr><tr><td><code>h hh</code></td><td>Hours 12h (1-12)</td></tr><tr><td><code>M MM</code></td><td>Minutes (uppercase)</td></tr><tr><td><code>s ss</code></td><td>Seconds</td></tr><tr><td><code>t tt</code></td><td>AM/PM marker</td></tr></table><h4>Examples</h4><pre>$0.dateFormat("ddd, dd mmm yyyy")\n→ Fri, 25 Nov 2016</pre><pre>$0.toDate("d/M/yyyy").dateFormat("yyyy-mm-dd")\n→ 2021-12-23</pre><pre>"2023-06-15".toDate("yyyy-mm-dd").dateFormat("mmmm dS, yyyy")\n→ June 15th, 2023</pre><p style="font-size:0.88em;opacity:0.6;">Date library based on Steven Levithan\'s date-format.</p>',
+'Tips':'<h3>Embedded JavaScript</h3><p>Wrap any JS expression in <code>&lt;% ... %&gt;</code>.</p><pre>&lt;% if ($rownum != 0) { \'AND \'; } %&gt;\n→ Outputs "AND " except first row</pre><pre>&lt;% if ($rownumOne != $numrows) { \',\'; } %&gt;\n→ Outputs comma except last row</pre><pre>&lt;% $0.toUpperCase() %&gt;\n→ Uppercase column 0</pre><h3>Result Sort / Dedup</h3><p>The result panel Sort, Invert, Shuffle, and Unique operations <b>reorder the source data first, then recalculate</b>, preserving multi-line pattern structure.</p><h3>Shortcuts</h3><table><tr><td><code>F5</code></td><td>Calculate</td></tr><tr><td><code>Ctrl+E</code></td><td>Calculate</td></tr><tr><td><code>Ctrl+Enter</code></td><td>Calculate</td></tr></table><h3>Delimiter Tips</h3><table><tr><td><code>\\t</code></td><td>Tab</td></tr><tr><td><code>\\n</code></td><td>Newline (Unix / macOS)</td></tr><tr><td><code>\\r\\n</code></td><td>CRLF (Windows)</td></tr><tr><td><code>,</code></td><td>Comma (CSV)</td></tr></table><h3>Pattern Structure</h3><pre>$ONCE  ← header (once)\n$EACH   ← repeated per row\n$ONCE  ← footer (once)\n$EACH   ← another repeating block\n$EACH+  ← repeats, skips first row</pre><h3>Storage</h3><p>Click <b>💾 儲存</b> to save patterns to browser storage. Saved patterns appear in the snippet dropdown and <b>📂 載入</b> popup. Use <b>📤 Export</b> / <b>📥 Import</b> to backup/restore entire project as JSON.</p><p style="font-size:0.85em;opacity:0.5;">This tool is a tribute to <a href="https://nimbletext.com" target="_blank">NimbleText</a>. Date library based on Steven Levithan.</p>'
+}};
+
+function showHelp(){
+  var existing=document.getElementById('helpOverlay');if(existing){existing.parentNode.removeChild(existing);return;}
+  var overlay=document.createElement('div');overlay.id='helpOverlay';overlay.className='overlay';
+  overlay.onclick=function(e){if(e.target===overlay)overlay.parentNode.removeChild(overlay);};
+  var modal=document.createElement('div');modal.className='modal';
+  modal.innerHTML='<div class="modal-header"><h2>'+t('helpTitle')+'</h2><button class="modal-close">&times;</button></div><div class="help-tabs" id="helpTabs"></div><div class="modal-body" id="helpBody"></div>';
+  overlay.appendChild(modal);document.body.appendChild(overlay);
+  modal.querySelector('.modal-close').onclick=function(){overlay.parentNode.removeChild(overlay);};
+
+  var currentLang='zh';
+  function renderTabs(lang){
+    var tabs=document.getElementById('helpTabs'),body=document.getElementById('helpBody');
+    tabs.innerHTML='';
+    var tabData=HELP_TABS["en"];
+    Object.keys(tabData).forEach(function(name,idx){
+      var tab=document.createElement('button');tab.className='help-tab'+(idx===0?' active':'');tab.textContent=name;
+      tab.onclick=function(){tabs.querySelectorAll('.help-tab').forEach(function(t){t.classList.remove('active');});tab.classList.add('active');body.innerHTML=tabData[name];};
+      tabs.appendChild(tab);
+    });
+    body.innerHTML=tabData[Object.keys(tabData)[0]];
+  }
+
+  modal.querySelectorAll('.lang-btn').forEach(function(btn){
+    btn.onclick=function(){
+      modal.querySelectorAll('.lang-btn').forEach(function(b){b.classList.remove('active');});
+      btn.classList.add('active');
+      currentLang=btn.dataset.lang;
+      renderTabs(currentLang);
+    };
+  });
+
+  renderTabs(currentLang);
+}
+
+// ── RESIZE ──
+function initResize(){
+  document.querySelectorAll('.resize-handle').forEach(function(handle){
+    var prev=handle.previousElementSibling,next=handle.nextElementSibling,startY,prevH,nextH;
+    handle.addEventListener('mousedown',function(e){
+      e.preventDefault();startY=e.clientY;prevH=prev.offsetHeight;nextH=next.offsetHeight;
+      document.body.style.cursor='ns-resize';document.body.style.userSelect='none';
+      function onMove(e2){var dy=e2.clientY-startY,newPrev=Math.max(80,prevH+dy),newNext=prevH+nextH-newPrev;if(newNext<80){newPrev=prevH+nextH-80;newNext=80;}prev.style.flex='0 0 '+newPrev+'px';next.style.flex='0 0 '+newNext+'px';}
+      function onUp(){document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);document.body.style.cursor='';document.body.style.userSelect='';}
+      document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp);
+    });
+  });
+}
+
+// ── STATE SETTERS ──
+function setColumnDelimiterIsRegex(v){
+  columnDelimiterIsRegex=v;
+  if(v&&csvMode){csvMode=false;$('chkCsvMode').checked=false;}
+  auto();
+}
+function setRowDelimiterIsRegex(v){rowDelimiterIsRegex=v;auto();}
+function setCsvMode(v){
+  csvMode=v;
+  if(v&&columnDelimiterIsRegex){columnDelimiterIsRegex=false;$('chkColRegex').checked=false;}
+  auto();
+}
+
+// ── KEYBOARD ──
+document.addEventListener('keydown',function(e){
+  if(e.key==='F5'||(e.ctrlKey&&e.key==='e')||(e.ctrlKey&&e.key==='Enter')){e.preventDefault();go();}
+});
+
+// ── INIT ──
+function init(){
+  try{var sl=localStorage.getItem('dataweave_lang');if(sl&&L10N[sl])currentLang=sl;}catch(e){}
+  loadQueryString();
+  if(!$('txtData').value)$('txtData').value=defaultText;
+  if(!$('txtPattern').value)$('txtPattern').value=defaultPattern;
+  $('rowDelim').value=unterpret(detectNativeDelimiter());
+  refreshSnippetDropdown();initResize();
+  document.querySelectorAll('.lang-switch').forEach(function(b){b.classList.toggle('active',b.dataset.lang===currentLang);});
+  applyL10N();ready=true;go();
+}
+window.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>
