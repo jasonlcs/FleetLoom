@@ -410,6 +410,7 @@ var isFiltering = false;
 var collapseMode = false;
 var ready = false;
 var autoCalculationInProgress = false;
+var _debounceTimer = 0;
 var currentLang = 'zh';
 
 var defaultText = "Lumbergh, Bill, Initech\nWaddams, Milton, Initech\nGibbons, Peter, Initech\nBolton, Michael, Initech";
@@ -538,9 +539,20 @@ function showCount(panel, len, prev) {
   var S = String.prototype, A = Array.prototype;
 
   if (!A.clean) A.clean = function(blankToo) {
-    for (var i = 0; i < this.length; i++) {
-      if (this[i] === "" || this[i] === null || (blankToo && this[i].trim() === "")) { this.splice(i, 1); i--; }
+    var r=[];
+    if(blankToo){
+      for(var i=0;i<this.length;i++){
+        var v=this[i];
+        if(v!==""&&v!==null&&v.trim()!=="")r.push(v);
+      }
+    } else {
+      for(var j=0;j<this.length;j++){
+        var w=this[j];
+        if(w!==""&&w!==null)r.push(w);
+      }
     }
+    this.length=0;
+    for(var k=0;k<r.length;k++)this.push(r[k]);
     return this;
   };
 
@@ -573,8 +585,10 @@ function showCount(panel, len, prev) {
   if (!S.lpad) S.lpad = function(len,ch) { ch=ch||" "; var s=String(this); if(len<=s.length)return s.left(len); while(s.length<len)s=ch+s; return s; };
   if (!S.rpad) S.rpad = function(len,ch) { ch=ch||" "; var s=String(this); if(len<=s.length)return s.left(len); while(s.length<len)s+=ch; return s; };
   if (!A.unique) A.unique = function() {
-    var r = [];
-    o: for (var i=0;i<this.length;i++){ for(var j=0;j<r.length;j++) if(r[j]===this[i]) continue o; r.push(this[i]); }
+    var seen={},r=[];
+    for(var i=0;i<this.length;i++){
+      if(!seen.hasOwnProperty(this[i])){seen[this[i]]=true;r.push(this[i]);}
+    }
     return r;
   };
   if (!S.htmlEncode) S.htmlEncode = function(){ return this.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
@@ -648,30 +662,50 @@ function newGuid(){return'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,
 if(!String.prototype.toDate)String.prototype.toDate=function(fmt){return toDate(this.toString(),fmt);};
 if(!String.prototype.reFormatDate)String.prototype.reFormatDate=function(fm,to){return reFormatDate(this.toString(),fm,to);};
 
-// ── CORE ENGINE ──
-function apply(pattern, row, fieldDelim, rowNum, numRows, dataRows, rowDelim, fullPattern) {
-  var headers = dataRows.length > 0 ? dataRows[0].split(fieldDelim) : [];
-  var fields = row.split(fieldDelim);
-  if (ignoreEmptyFields) fields = fields.clean(trimFields);
-  var result = pattern;
-  var reExpr = /<%([\s\S]*?)%>/g, m;
-  while ((m = reExpr.exec(pattern)) !== null) {
-    var code = m[1];
-    code = code.replace(/\$rowDelim/ig,'(rowDelim)').replace(/\$rownumOne/ig,'(rowNum+1)').replace(/\$rownum/ig,'(rowNum)').replace(/\$row/ig,'(row)').replace(/\$numrows/ig,'(numRows)').replace(/\$numfields/ig,'(fields.length)').replace(/\$colDelim/ig,'(fieldDelim)');
-    code = code.replace(/\$h(0|[1-9]\d*)/gi,function(_,n){return'(('+(trimFields?'('+JSON.stringify(headers[+n])+').trim()':JSON.stringify(headers[+n]))+'))';});
-    code = code.replace(/\$\-(0|[1-9]\d*)/g,function(_,n){return'(fields[fields.length-'+n+']'+(trimFields?'.trim()':'')+')';});
-    code = code.replace(/\$(0|[1-9]\d*)/g,function(_,n){return'(fields['+n+']'+(trimFields?'.trim()':'')+')';});
-    code = code.replace(/\$lt;/ig,'<').replace(/\$gt;/ig,'>').replace(/\$percent;/ig,'%').replace(/\$dollar;/ig,'$');
-    var val;
-    try { val = eval(code); } catch(err) { val = '\n'+err.name+' in ['+m[0]+']\n  → '+code+'\n  Error: '+(err.message||err)+'\n'; }
-    if (val === null || val === undefined) val = '';
-    result = result.replace(m[0], val);
+// ── PATTERN PRE-COMPILATION ──
+function compileBlocks(pattern, headers) {
+  var blocks=[], re=/<%([\s\S]*?)%>/g, m;
+  while((m=re.exec(pattern))!==null){
+    var code=m[1];
+    code=code.replace(/\$rowDelim/ig,'(rowDelim)');
+    code=code.replace(/\$rownumOne/ig,'(rowNum+1)');
+    code=code.replace(/\$rownum/ig,'(rowNum)');
+    code=code.replace(/\$row/ig,'(row)');
+    code=code.replace(/\$numrows/ig,'(numRows)');
+    code=code.replace(/\$numfields/ig,'(fields.length)');
+    code=code.replace(/\$colDelim/ig,'(fieldDelim)');
+    code=code.replace(/\$h(0|[1-9]\d*)/gi,function(_,n){return'(('+(trimFields?'('+JSON.stringify(headers[+n])+').trim()':JSON.stringify(headers[+n]))+'))';});
+    code=code.replace(/\$\-(0|[1-9]\d*)/g,function(_,n){return'(fields[fields.length-'+n+']'+(trimFields?'.trim()':'')+')';});
+    code=code.replace(/\$(0|[1-9]\d*)/g,function(_,n){return'(fields['+n+']'+(trimFields?'.trim()':'')+')';});
+    code=code.replace(/\$lt;/ig,'<').replace(/\$gt;/ig,'>').replace(/\$percent;/ig,'%').replace(/\$dollar;/ig,'$');
+    blocks.push({m:m[0],c:code});
   }
-  result = result.replace(/\$rowDelim/ig, rowDelim).replace(/\$rownumOne/ig, rowNum+1).replace(/\$rownum/ig, rowNum).replace(/\$row/ig, row).replace(/\$numrows/ig, numRows).replace(/\$numfields/ig, fields.length).replace(/\$colDelim/ig, fieldDelim);
-  result = result.replace(/\$(0|[1-9]\d*)/g,function(_,n){return fields[n]!==undefined?(trimFields?fields[n].trim():fields[n]):'$'+n;});
-  result = result.replace(/\$\-(0|[1-9]\d*)/g,function(_,n){var idx=fields.length-n;return fields[idx]!==undefined?(trimFields?fields[idx].trim():fields[idx]):'$-'+n;});
-  result = result.replace(/\$h(0|[1-9]\d*)/gi,function(_,n){return headers[n]!==undefined?(trimFields?headers[n].trim():headers[n]):'$h'+n;});
-  result = result.replace(/\$lt;/ig,'<').replace(/\$gt;/ig,'>').replace(/\$percent;/ig,'%').replace(/\$dollar;/ig,'$');
+  return blocks;
+}
+
+// ── CORE ENGINE ──
+function apply(pattern, row, fieldDelim, rowNum, numRows, dataRows, rowDelim, fullPattern, cache) {
+  var headers=dataRows.length>0?dataRows[0].split(fieldDelim):[];
+  var fields=row.split(fieldDelim);
+  if(ignoreEmptyFields)fields=fields.clean(trimFields);
+  var result=pattern;
+
+  var blocks;
+  if(cache&&cache[pattern]){blocks=cache[pattern];}
+  else{blocks=compileBlocks(pattern,headers);if(cache)cache[pattern]=blocks;}
+
+  for(var i=0;i<blocks.length;i++){
+    var b=blocks[i],val;
+    try{val=eval(b.c);}catch(err){val='\n'+err.name+' in ['+b.m+']\n  → '+b.c+'\n  Error: '+(err.message||err)+'\n';}
+    if(val===null||val===undefined)val='';
+    result=result.replace(b.m,val);
+  }
+
+  result=result.replace(/\$rowDelim/ig,rowDelim).replace(/\$rownumOne/ig,rowNum+1).replace(/\$rownum/ig,rowNum).replace(/\$row/ig,row).replace(/\$numrows/ig,numRows).replace(/\$numfields/ig,fields.length).replace(/\$colDelim/ig,fieldDelim);
+  result=result.replace(/\$(0|[1-9]\d*)/g,function(_,n){return fields[n]!==undefined?(trimFields?fields[n].trim():fields[n]):'$'+n;});
+  result=result.replace(/\$\-(0|[1-9]\d*)/g,function(_,n){var idx=fields.length-n;return fields[idx]!==undefined?(trimFields?fields[idx].trim():fields[idx]):'$-'+n;});
+  result=result.replace(/\$h(0|[1-9]\d*)/gi,function(_,n){return headers[n]!==undefined?(trimFields?headers[n].trim():headers[n]):'$h'+n;});
+  result=result.replace(/\$lt;/ig,'<').replace(/\$gt;/ig,'>').replace(/\$percent;/ig,'%').replace(/\$dollar;/ig,'$');
   return result;
 }
 
@@ -696,22 +730,24 @@ function calculate(data,pattern,filter,rowDelim,fieldDelim,outParam){
   if(autoPreview&&numRows>1000){autoPreview=false;$('chkAuto').checked=false;}
   if(!autoPreview&&reverseEngineerPattern(pattern,data,$('txtResults').value,dataRows[0]||'',fieldDelim)){outParam.numRows=numRows;return $('txtResults').value;}
   if(isFiltering&&filter&&filter.trim()!==''){
-    var filteredRows=[];
+    var filteredRows=[],filterCache={};
+    var filterPattern='<% '+filter+' %>';
     for(var fi=0;fi<dataRows.length;fi++){
-      try{var filterCode=apply('<% '+filter+' %>',dataRows[fi],fieldDelim,fi,numRows,dataRows,rowDelim,pattern);if(eval(filterCode))filteredRows.push(dataRows[fi]);}catch(e){}
+      try{var filterCode=apply(filterPattern,dataRows[fi],fieldDelim,fi,numRows,dataRows,rowDelim,pattern,filterCache);if(eval(filterCode))filteredRows.push(dataRows[fi]);}catch(e){}
     }
     dataRows=filteredRows;numRows=dataRows.length;
   }
   showCount("Data",dataRows.length);
-  var patterns=pattern.split(eachDelim),result='';
+  var patterns=pattern.split(eachDelim),resultParts=[],applyCache={};
   for(var iPat=0;iPat<patterns.length;iPat++){
     var start=0,inner=patterns[iPat].split(onceDelim)[0].ltrimCrLf().rtrimCrLf();
     if(inner.length>0){if(inner[0]==='+'){inner=inner.slice(1).ltrimCrLf();start=1;}
-      for(var i=start;i<numRows;i++){result+=apply(inner,dataRows[i],fieldDelim,i,numRows,dataRows,rowDelim,pattern);if(addLineSep)result+='\n';}
+      for(var i=start;i<numRows;i++){resultParts.push(apply(inner,dataRows[i],fieldDelim,i,numRows,dataRows,rowDelim,pattern,applyCache));if(addLineSep)resultParts.push('\n');}
     }
     var stopParts=patterns[iPat].split(onceDelim);
-    for(var j=1;j<stopParts.length;j++){result+=apply(stopParts[j].ltrimCrLf(),dataRows[0]||'',fieldDelim,0,numRows,dataRows,rowDelim,pattern);}
+    for(var j=1;j<stopParts.length;j++){resultParts.push(apply(stopParts[j].ltrimCrLf(),dataRows[0]||'',fieldDelim,0,numRows,dataRows,rowDelim,pattern,applyCache));}
   }
+  var result=resultParts.join('');
   outParam.numRows=numRows;showCount("Results",result.split('\n').clean(true).length);
   return result;
 }
@@ -728,9 +764,13 @@ function go(){
 }
 
 function auto(){
-  if(autoCalculationInProgress)return;autoCalculationInProgress=true;
-  if(autoPreview&&ready)go();
-  autoCalculationInProgress=false;
+  if(!autoPreview||!ready)return;
+  clearTimeout(_debounceTimer);
+  _debounceTimer=setTimeout(function(){
+    if(autoCalculationInProgress)return;autoCalculationInProgress=true;
+    go();
+    autoCalculationInProgress=false;
+  },150);
 }
 
 function setauto(){autoPreview=$('chkAuto').checked;auto();}
