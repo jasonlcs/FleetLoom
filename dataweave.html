@@ -46,6 +46,9 @@
     --shadow: 0 1px 3px rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.2);
     --shadow-lg: 0 4px 16px rgba(0,0,0,.4);
   }
+  #trustBanner { background: #5c3d0e; color: #f0d07c; border-bottom-color: #8b6914; }
+  #trustBanner .btn-primary { background: #cf3a1a; border-color: #cf3a1a; }
+  #trustBanner .btn-primary:hover { background: #e84a2a; border-color: #e84a2a; }
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -166,8 +169,10 @@ html, body {
   text-align: center;
 }
 .separators input:focus { border-color: var(--accent); }
+.separators input.error { border-color: var(--red); background: rgba(229,72,77,.08); }
 .separators label { display: flex; align-items: center; gap: 2px; cursor: pointer; }
 .separators label input { width: auto; accent-color: var(--accent); }
+.separators label.csv-label { font-weight: 600; color: var(--accent); }
 
 /* ── Resize handles ── */
 .resize-handle {
@@ -282,6 +287,17 @@ select:focus { border-color: var(--accent); }
 .snippet-item:hover .snippet-del { opacity: 1; }
 .snippet-del:hover { background: var(--red); color: #fff; }
 
+/* ── Trust Banner ── */
+#trustBanner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px; background: var(--amber); color: #000;
+  font-size: 12px; font-weight: 500;
+  border-bottom: 2px solid #d4880f; flex-shrink: 0;
+}
+#trustBanner .btn { font-size: 11px; padding: 4px 10px; }
+#trustBanner .btn-primary { background: #d4380d; border-color: #d4380d; color: #fff; }
+#trustBanner .btn-primary:hover { background: #b0320b; border-color: #b0320b; }
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -334,6 +350,13 @@ select:focus { border-color: var(--accent); }
   <button class="btn btn-ghost btn-icon" onclick="showHelp();" title="使用說明">?</button>
 </div>
 
+<!-- ── Trust Banner ── -->
+<div id="trustBanner" style="display:none;">
+  <span>⚠ 此分享連結含可執行程式碼</span>
+  <button class="btn btn-primary" id="trustBtn" onclick="trustAndExecute();">檢視並信任執行</button>
+  <button class="btn" id="trustRejectBtn" onclick="rejectTrusted();">略過</button>
+</div>
+
 <!-- ── Main Panels ── -->
 <div id="main">
   <!-- Data -->
@@ -349,10 +372,11 @@ select:focus { border-color: var(--accent); }
     </div>
     <div class="panel-body">
       <textarea id="txtData" oninput="auto();" spellcheck="false"></textarea>
-      <div class="separators">
+       <div class="separators">
         <span>Col</span>
         <input type="text" value="," id="fieldDelim" oninput="auto();" spellcheck="false" title="Use \t for tab">
         <label title="Regex"><input type="checkbox" id="chkColRegex" onchange="setColumnDelimiterIsRegex(this.checked);">rx</label>
+        <label title="CSV mode (RFC 4180)"><input type="checkbox" id="chkCsvMode" onchange="setCsvMode(this.checked);">CSV</label>
         <span>Row</span>
         <input type="text" value="\n" id="rowDelim" oninput="auto();" spellcheck="false" title="Use \r\n for Windows, \n for Unix">
         <label title="Regex"><input type="checkbox" id="chkRowRegex" onchange="setRowDelimiterIsRegex(this.checked);">rx</label>
@@ -406,6 +430,7 @@ var ignoreEmptyRows = true;
 var autoPreview = true;
 var columnDelimiterIsRegex = false;
 var rowDelimiterIsRegex = false;
+var csvMode = false;
 var isFiltering = false;
 var collapseMode = false;
 var ready = false;
@@ -502,7 +527,7 @@ function applyL10N(){
   // Result action buttons
   var rbtns=d.querySelectorAll('#resultsPanel .dashboard .btn-ghost');for(var i=0;i<rbtns.length;i++){var rb=rbtns[i],fn2=rb.getAttribute('onclick')||'';if(fn2.indexOf('sortResult()')>=0){rb.title=L.sortTitle;rb.textContent=L.sortLabel;}else if(fn2.indexOf('sortResultByCol')>=0){rb.title=L.colSortTitle;rb.textContent=L.colSortLabel;}else if(fn2.indexOf('invertResult')>=0){rb.title=L.invertTitle;rb.textContent=L.invertLabel;}else if(fn2.indexOf('shuffleResult')>=0){rb.title=L.shuffleTitle;rb.textContent=L.shuffleLabel;}else if(fn2.indexOf('removeResultDuplicates')>=0){rb.title=L.dedupTitle;rb.textContent=L.dedupLabel;}else if(fn2.indexOf('copyResult')>=0){rb.title=L.copyTitle;if(rb.textContent.indexOf('✅')===-1)rb.textContent=L.copyLabel;}}
   // Separators
-  var seps=d.querySelector('.separators');if(seps){var spans=seps.querySelectorAll('span');if(spans[0])spans[0].textContent=L.colLabel+': ';if(spans[2])spans[2].textContent=L.rowLabel+': ';var rxs=seps.querySelectorAll('label');if(rxs[0]){rxs[0].childNodes[1]&&(rxs[0].childNodes[1].textContent=L.regexLabel);rxs[0].title=L.regexTitle;}if(rxs[1]){rxs[1].childNodes[1]&&(rxs[1].childNodes[1].textContent=L.regexLabel);rxs[1].title=L.regexTitle;}}
+  var seps=d.querySelector('.separators');if(seps){var spans=seps.querySelectorAll('span');if(spans[0])spans[0].textContent=L.colLabel+': ';if(spans[2])spans[2].textContent=L.rowLabel+': ';var colRx=d.querySelector('#chkColRegex');var rowRx=d.querySelector('#chkRowRegex');if(colRx){var cl=colRx.parentNode;cl.childNodes[1]&&(cl.childNodes[1].textContent=L.regexLabel);cl.title=L.regexTitle;}if(rowRx){var rl=rowRx.parentNode;rl.childNodes[1]&&(rl.childNodes[1].textContent=L.regexLabel);rl.title=L.regexTitle;}}
   // Snippet dropdown (static options)
   var sOpts=d.querySelectorAll('#selectSnippet option:not(.custom-snippet)');var labels=[L.snippetRowNum,L.snippetRowNumOne,L.snippetRow,L.snippetNumRows,L.snippetUpper,L.snippetLower,L.snippetPascal,L.snippetCamel,L.snippetSentence,L.snippetSnake,L.snippetKebab,L.snippetTitle,L.snippetWords,L.snippetReverse,L.snippetCondFirst,L.snippetCondLast,L.snippetHtmlUl,L.snippetHtmlTable,L.snippetHtmlTableHdr];for(var i=0;i<Math.min(sOpts.length-1,labels.length);i++){sOpts[i+1].textContent=labels[i];}
   // My Patterns separator
@@ -525,6 +550,96 @@ function detectNativeDelimiter() {
   var el = document.createElement('textarea');
   el.value = "\r\n";
   return el.value;
+}
+
+// ── SPLIT BY (regex-aware) ──
+function splitBy(str, delim, isRegex) {
+  if (!isRegex) return str.split(delim);
+  try {
+    var re = new RegExp(delim);
+    return str.split(re);
+  } catch (e) {
+    $('fieldDelim').classList.add('error');
+    $('rowDelim').classList.add('error');
+    return str.split(delim);
+  }
+}
+
+// ── RFC 4180 CSV STATE MACHINE ──
+function parseCSV(text, delim) {
+  var rows = [], row = [], field = '';
+  var inQuotes = false, i = 0, n = text.length;
+  while (i < n) {
+    var ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (i + 1 < n && text[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else { field += ch; }
+    } else {
+      if (ch === '"' && field.length === 0) { inQuotes = true; }
+      else if (ch === delim) { row.push(field); field = ''; }
+      else if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else if (ch === '\r') {
+        if (i + 1 < n && text[i + 1] === '\n') i++;
+        row.push(field); rows.push(row); row = []; field = '';
+      } else { field += ch; }
+    }
+    i++;
+  }
+  if (field !== '' || row.length > 0) { row.push(field); rows.push(row); }
+  // Clean empty trailing row
+  if (rows.length > 0 && rows[rows.length - 1].length === 1 && rows[rows.length - 1][0] === '') rows.pop();
+  return rows;
+}
+
+// ── LZ COMPRESSION (for hash sharing) ──
+function lzCompress(str) {
+  var out = [], i = 0, n = str.length;
+  while (i < n) {
+    var bestLen = 0, bestDist = 0;
+    var searchStart = Math.max(0, i - 1024);
+    var maxSearchLen = Math.min(n - i, 64);
+    for (var j = searchStart; j < i; j++) {
+      var len = 0;
+      while (len < maxSearchLen && str[j + len] === str[i + len]) len++;
+      if (len >= 4 && len > bestLen) { bestLen = len; bestDist = i - j; }
+    }
+    if (bestLen >= 4) {
+      out.push(254); out.push(bestDist & 0xFF); out.push(bestLen);
+      i += bestLen;
+    } else {
+      var ch = str.charCodeAt(i);
+      if (ch >= 254) { out.push(253); out.push(ch - 254); }
+      else out.push(ch);
+      i++;
+    }
+  }
+  var parts = [];
+  for (i = 0; i < out.length; i += 1024) parts.push(String.fromCharCode.apply(null, out.slice(i, i + 1024)));
+  return btoa(parts.join('')).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function lzDecompress(b64) {
+  b64 = b64.replace(/-/g, '+').replace(/_/g, '/');
+  while (b64.length % 4) b64 += '=';
+  var binary = atob(b64), out = '', i = 0, n = binary.length;
+  while (i < n) {
+    var ch = binary.charCodeAt(i);
+    if (ch === 254 && i + 2 < n) {
+      var dist = binary.charCodeAt(i + 1), len = binary.charCodeAt(i + 2);
+      var start = out.length - dist;
+      for (var k = 0; k < len; k++) out += out[start + k];
+      i += 3;
+    } else if (ch === 253 && i + 1 < n) {
+      out += String.fromCharCode(254 + binary.charCodeAt(i + 1));
+      i += 2;
+    } else {
+      out += String.fromCharCode(ch);
+      i++;
+    }
+  }
+  return out;
 }
 
 function showCount(panel, len, prev) {
@@ -684,28 +799,41 @@ function compileBlocks(pattern, headers) {
 }
 
 // ── CORE ENGINE ──
-function apply(pattern, row, fieldDelim, rowNum, numRows, dataRows, rowDelim, fullPattern, cache) {
-  var headers=dataRows.length>0?dataRows[0].split(fieldDelim):[];
-  var fields=row.split(fieldDelim);
-  if(ignoreEmptyFields)fields=fields.clean(trimFields);
-  var result=pattern;
+function apply(pattern, row, fieldDelim, rowNum, numRows, dataRows, rowDelim, fullPattern, cache, csvFields, csvHeaders) {
+  var headers;
+  if (csvFields && rowNum === 0) { headers = csvFields; }
+  else if (csvHeaders) { headers = csvHeaders; }
+  else { headers = dataRows.length > 0 ? splitBy(dataRows[0], fieldDelim, columnDelimiterIsRegex) : []; }
+  var fields = csvFields || splitBy(row, fieldDelim, columnDelimiterIsRegex);
+  if (ignoreEmptyFields) fields = fields.clean(trimFields);
+  var result = pattern;
 
   var blocks;
-  if(cache&&cache[pattern]){blocks=cache[pattern];}
-  else{blocks=compileBlocks(pattern,headers);if(cache)cache[pattern]=blocks;}
+  if (cache && cache[pattern]) { blocks = cache[pattern]; }
+  else { blocks = compileBlocks(pattern, headers); if (cache) cache[pattern] = blocks; }
 
-  for(var i=0;i<blocks.length;i++){
-    var b=blocks[i],val;
-    try{val=eval(b.c);}catch(err){val='\n'+err.name+' in ['+b.m+']\n  → '+b.c+'\n  Error: '+(err.message||err)+'\n';}
-    if(val===null||val===undefined)val='';
-    result=result.replace(b.m,val);
+  for (var i = 0; i < blocks.length; i++) {
+    var b = blocks[i], val;
+    try {
+      var fn = new Function('rowDelim','rowNum','row','numRows','fields','fieldDelim','headers','trimFields','"use strict";return (' + b.c + ')');
+      val = fn(rowDelim, rowNum, row, numRows, fields, fieldDelim, headers, trimFields);
+    } catch (errExpr) {
+      try {
+        val = eval(b.c);
+      } catch (errEval) {
+        val = '\n[block ' + i + '] 表達式錯誤';
+        console.error('Expression error [' + b.m + ']:', errEval.message || errEval);
+      }
+    }
+    if (val === null || val === undefined) val = '';
+    result = result.replace(b.m, val);
   }
 
-  result=result.replace(/\$rowDelim/ig,rowDelim).replace(/\$rownumOne/ig,rowNum+1).replace(/\$rownum/ig,rowNum).replace(/\$row/ig,row).replace(/\$numrows/ig,numRows).replace(/\$numfields/ig,fields.length).replace(/\$colDelim/ig,fieldDelim);
-  result=result.replace(/\$(0|[1-9]\d*)/g,function(_,n){return fields[n]!==undefined?(trimFields?fields[n].trim():fields[n]):'$'+n;});
-  result=result.replace(/\$\-(0|[1-9]\d*)/g,function(_,n){var idx=fields.length-n;return fields[idx]!==undefined?(trimFields?fields[idx].trim():fields[idx]):'$-'+n;});
-  result=result.replace(/\$h(0|[1-9]\d*)/gi,function(_,n){return headers[n]!==undefined?(trimFields?headers[n].trim():headers[n]):'$h'+n;});
-  result=result.replace(/\$lt;/ig,'<').replace(/\$gt;/ig,'>').replace(/\$percent;/ig,'%').replace(/\$dollar;/ig,'$');
+  result = result.replace(/\$rowDelim/ig, rowDelim).replace(/\$rownumOne/ig, rowNum + 1).replace(/\$rownum/ig, rowNum).replace(/\$row/ig, row).replace(/\$numrows/ig, numRows).replace(/\$numfields/ig, fields.length).replace(/\$colDelim/ig, fieldDelim);
+  result = result.replace(/\$(0|[1-9]\d*)/g, function(_, n) { return fields[n] !== undefined ? (trimFields ? fields[n].trim() : fields[n]) : '$' + n; });
+  result = result.replace(/\$\-(0|[1-9]\d*)/g, function(_, n) { var idx = fields.length - n; return fields[idx] !== undefined ? (trimFields ? fields[idx].trim() : fields[idx]) : '$-' + n; });
+  result = result.replace(/\$h(0|[1-9]\d*)/gi, function(_, n) { return headers[n] !== undefined ? (trimFields ? headers[n].trim() : headers[n]) : '$h' + n; });
+  result = result.replace(/\$lt;/ig, '<').replace(/\$gt;/ig, '>').replace(/\$percent;/ig, '%').replace(/\$dollar;/ig, '$');
   return result;
 }
 
@@ -725,27 +853,57 @@ function reverseEngineerPattern(pattern,data,result,firstRow,fieldDelim){
 
 function calculate(data,pattern,filter,rowDelim,fieldDelim,outParam){
   var eachDelim=/\$EACH/i,onceDelim=/\$ONCE/i;
-  var dataRows=data.split(rowDelim);if(ignoreEmptyRows)dataRows=dataRows.clean(trimFields);
+  var dataRows,csvParsed=null;
+  if(csvMode){
+    csvParsed=parseCSV(data,fieldDelim);
+    dataRows=csvParsed.map(function(f){return f.join(fieldDelim);});
+    // Warn on inconsistent column counts
+    if(csvParsed.length>1){
+      var colCount=csvParsed[0].length,inconsistent=false;
+      for(var ci=1;ci<csvParsed.length;ci++){if(csvParsed[ci].length!==colCount){inconsistent=true;break;}}
+      if(inconsistent)console.warn('CSV: inconsistent column counts detected');
+    }
+  } else {
+    dataRows=splitBy(data,rowDelim,rowDelimiterIsRegex);
+  }
+  if(ignoreEmptyRows){
+    if(csvMode&&csvParsed){
+      var cleanRows=[],cleanCSV=[];
+      for(var ri=0;ri<dataRows.length;ri++){
+        var v=dataRows[ri];
+        if(v!==""&&v!==null&&v.trim()!==""){cleanRows.push(v);cleanCSV.push(csvParsed[ri]);}
+      }
+      dataRows=cleanRows;csvParsed=cleanCSV;
+    } else {
+      dataRows=dataRows.clean(trimFields);
+    }
+  }
   var numRows=dataRows.length;
   if(autoPreview&&numRows>1000){autoPreview=false;$('chkAuto').checked=false;}
   if(!autoPreview&&reverseEngineerPattern(pattern,data,$('txtResults').value,dataRows[0]||'',fieldDelim)){outParam.numRows=numRows;return $('txtResults').value;}
+  var csvHeaders=csvMode&&csvParsed&&csvParsed.length>0?csvParsed[0]:null;
   if(isFiltering&&filter&&filter.trim()!==''){
-    var filteredRows=[],filterCache={};
+    var filteredRows=[],filteredCSV=csvParsed?[]:null,filterCache={};
     var filterPattern='<% '+filter+' %>';
     for(var fi=0;fi<dataRows.length;fi++){
-      try{var filterCode=apply(filterPattern,dataRows[fi],fieldDelim,fi,numRows,dataRows,rowDelim,pattern,filterCache);if(eval(filterCode))filteredRows.push(dataRows[fi]);}catch(e){}
+      try{
+        var filterCode=apply(filterPattern,dataRows[fi],fieldDelim,fi,numRows,dataRows,rowDelim,pattern,filterCache,csvParsed?csvParsed[fi]:null,csvHeaders);
+        var filterFn=new Function('"use strict";return ('+filterCode+')');
+        if(filterFn()){filteredRows.push(dataRows[fi]);if(filteredCSV)filteredCSV.push(csvParsed[fi]);}
+      }catch(e){}
     }
-    dataRows=filteredRows;numRows=dataRows.length;
+    dataRows=filteredRows;if(filteredCSV)csvParsed=filteredCSV;
+    numRows=dataRows.length;
   }
   showCount("Data",dataRows.length);
   var patterns=pattern.split(eachDelim),resultParts=[],applyCache={};
   for(var iPat=0;iPat<patterns.length;iPat++){
     var start=0,inner=patterns[iPat].split(onceDelim)[0].ltrimCrLf().rtrimCrLf();
     if(inner.length>0){if(inner[0]==='+'){inner=inner.slice(1).ltrimCrLf();start=1;}
-      for(var i=start;i<numRows;i++){resultParts.push(apply(inner,dataRows[i],fieldDelim,i,numRows,dataRows,rowDelim,pattern,applyCache));if(addLineSep)resultParts.push('\n');}
+      for(var i=start;i<numRows;i++){resultParts.push(apply(inner,dataRows[i],fieldDelim,i,numRows,dataRows,rowDelim,pattern,applyCache,csvParsed?csvParsed[i]:null,csvHeaders));if(addLineSep)resultParts.push('\n');}
     }
     var stopParts=patterns[iPat].split(onceDelim);
-    for(var j=1;j<stopParts.length;j++){resultParts.push(apply(stopParts[j].ltrimCrLf(),dataRows[0]||'',fieldDelim,0,numRows,dataRows,rowDelim,pattern,applyCache));}
+    for(var j=1;j<stopParts.length;j++){resultParts.push(apply(stopParts[j].ltrimCrLf(),dataRows[0]||'',fieldDelim,0,numRows,dataRows,rowDelim,pattern,applyCache,csvParsed?csvParsed[0]:null,csvHeaders));}
   }
   var result=resultParts.join('');
   outParam.numRows=numRows;showCount("Results",result.split('\n').clean(true).length);
@@ -754,16 +912,25 @@ function calculate(data,pattern,filter,rowDelim,fieldDelim,outParam){
 
 // ── MAIN ACTIONS ──
 function go(){
+  if(!_trustedPattern)return;
   try{
     var rowDelim=interpret($('rowDelim').value),fieldDelim=interpret($('fieldDelim').value);
     var data=$('txtData').value,pattern=$('txtPattern').value;
     $('rowDelim').classList.remove('error');$('fieldDelim').classList.remove('error');
+    $('statsData').style.color='';
+    if(columnDelimiterIsRegex||rowDelimiterIsRegex){
+      try{if(columnDelimiterIsRegex)new RegExp(fieldDelim);if(rowDelimiterIsRegex)new RegExp(rowDelim);}catch(e){
+        $('fieldDelim').classList.add('error');$('rowDelim').classList.add('error');
+        $('txtResults').value='[Regex Error] '+(e.message||e);return;
+      }
+    }
     var out={numRows:0},filter=isFiltering?$('txtFilter').value:null;
     $('txtResults').value=calculate(data,pattern,filter,rowDelim,fieldDelim,out);
   }catch(err){console.error(err);}
 }
 
 function auto(){
+  if(!_trustedPattern)return;
   if(!autoPreview||!ready)return;
   clearTimeout(_debounceTimer);
   _debounceTimer=setTimeout(function(){
@@ -846,7 +1013,7 @@ function refreshSnippetDropdown(){
 
 // ── DATA/RESULT MANIPULATION ──
 // Data operations: work on raw rows. Result operations: reorder data then recalculate.
-function getRows(target){var rowDelim=interpret($('rowDelim').value);return $('txt'+target).value.split(rowDelim).clean(trimFields);}
+function getRows(target){var rowDelim=interpret($('rowDelim').value);return splitBy($('txt'+target).value,rowDelim,rowDelimiterIsRegex).clean(trimFields);}
 function setRows(target,rows){var rowDelim=interpret($('rowDelim').value);$('txt'+target).value=rows.join(rowDelim);if(target==='Data')auto();}
 
 function sortControl(target){var rows=getRows(target);showCount(target,rows.length);rows.sort(function(a,b){var na=isNaN(a),nb=isNaN(b);if(!na&&!nb)return a-b;if(na&&nb){a=a.toLowerCase();b=b.toLowerCase();return a<b?-1:a>b?1:0;}return na?1:-1;});setRows(target,rows);}
@@ -888,18 +1055,62 @@ function copyResult(){
 
 // ── SAVE/LOAD URL ──
 function saveUrl(){
-  var params=new URLSearchParams();
-  params.set('data',$('txtData').value);params.set('pattern',$('txtPattern').value);
-  params.set('col',$('fieldDelim').value);params.set('row',$('rowDelim').value);
-  var url=window.location.origin+window.location.pathname+'?'+params.toString();
+  var d=$('txtData').value,p=$('txtPattern').value;
+  var c=$('fieldDelim').value,r=$('rowDelim').value;
+  var payload='d='+lzCompress(d)+'&p='+lzCompress(p)+'&c='+encodeURIComponent(c)+'&r='+encodeURIComponent(r);
+  var url=window.location.origin+window.location.pathname+'#'+payload;
   navigator.clipboard.writeText(url).then(function(){alert(t('copied'));}).catch(function(){prompt(t('copyPrompt'),url);});
 }
+function _loadHash(){
+  var h=window.location.hash;
+  if(!h||h==='#')return false;
+  h=h.substring(1);
+  try{
+    var parts=h.split('&'),params={};
+    for(var i=0;i<parts.length;i++){var kv=parts[i].split('=');params[kv[0]]=kv.slice(1).join('=');}
+    if(params.d)$('txtData').value=lzDecompress(params.d);
+    if(params.p){$('txtPattern').value=lzDecompress(params.p);}
+    if(params.c)$('fieldDelim').value=decodeURIComponent(params.c);
+    if(params.r)$('rowDelim').value=decodeURIComponent(params.r);
+    return true;
+  }catch(e){console.error('Failed to load hash:',e);return false;}
+}
 function loadQueryString(){
-  var p=new URLSearchParams(window.location.search);
-  if(p.has('data'))$('txtData').value=p.get('data');
-  if(p.has('pattern'))$('txtPattern').value=p.get('pattern');
-  if(p.has('col'))$('fieldDelim').value=p.get('col');
-  if(p.has('row'))$('rowDelim').value=p.get('row');
+  var fromHash=_loadHash();
+  if(!fromHash){
+    var p=new URLSearchParams(window.location.search);
+    if(p.has('data'))$('txtData').value=p.get('data');
+    if(p.has('pattern'))$('txtPattern').value=p.get('pattern');
+    if(p.has('col'))$('fieldDelim').value=p.get('col');
+    if(p.has('row'))$('rowDelim').value=p.get('row');
+  }
+}
+
+// ── TRUST BANNER ──
+var _trustedPattern=false;
+var _externalSource=false;
+function _hasScriptBlocks(pat){
+  return /<%[\s\S]*?%>/.test(pat);
+}
+function checkTrust(){
+  if(!_externalSource){_trustedPattern=true;return;}
+  var pat=$('txtPattern').value;
+  if(!_hasScriptBlocks(pat)){_trustedPattern=true;return;}
+  _trustedPattern=false;
+  $('trustBanner').style.display='flex';
+  $('chkAuto').checked=false;autoPreview=false;
+}
+function trustAndExecute(){
+  _trustedPattern=true;
+  $('trustBanner').style.display='none';
+  $('chkAuto').checked=true;autoPreview=true;
+  go();
+}
+function rejectTrusted(){
+  $('trustBanner').style.display='none';
+  $('txtPattern').value='';
+  _externalSource=false;_trustedPattern=true;
+  go();
 }
 
 // ── CLEAR ──
@@ -982,8 +1193,17 @@ function initResize(){
 }
 
 // ── STATE SETTERS ──
-function setColumnDelimiterIsRegex(v){columnDelimiterIsRegex=v;auto();}
+function setColumnDelimiterIsRegex(v){
+  columnDelimiterIsRegex=v;
+  if(v&&csvMode){csvMode=false;$('chkCsvMode').checked=false;}
+  auto();
+}
 function setRowDelimiterIsRegex(v){rowDelimiterIsRegex=v;auto();}
+function setCsvMode(v){
+  csvMode=v;
+  if(v&&columnDelimiterIsRegex){columnDelimiterIsRegex=false;$('chkColRegex').checked=false;}
+  auto();
+}
 
 // ── KEYBOARD ──
 document.addEventListener('keydown',function(e){
@@ -993,13 +1213,18 @@ document.addEventListener('keydown',function(e){
 // ── INIT ──
 function init(){
   try{var sl=localStorage.getItem('dataweave_lang');if(sl&&L10N[sl])currentLang=sl;}catch(e){}
+  var hadHash=window.location.hash&&window.location.hash!=='#';
+  var hadQS=window.location.search&&window.location.search!=='';
+  _externalSource=hadHash||hadQS;
   loadQueryString();
   if(!$('txtData').value)$('txtData').value=defaultText;
   if(!$('txtPattern').value)$('txtPattern').value=defaultPattern;
   $('rowDelim').value=unterpret(detectNativeDelimiter());
   refreshSnippetDropdown();initResize();
   document.querySelectorAll('.lang-switch').forEach(function(b){b.classList.toggle('active',b.dataset.lang===currentLang);});
-  applyL10N();ready=true;go();
+  applyL10N();ready=true;
+  checkTrust();
+  if(_trustedPattern)go();
 }
 window.addEventListener('DOMContentLoaded',init);
 </script>
