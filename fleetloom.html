@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DataWeave</title>
+<title>FleetLoom</title>
 <style>
 :root {
   --bg: #f8f9fb;
@@ -295,7 +295,7 @@ select:focus { border-color: var(--accent); }
 
 <!-- ── Toolbar ── -->
 <div id="toolbar">
-  <span id="brand">DataWeave <span>· 文字處理工具</span></span>
+  <span id="brand">FleetLoom <span>· 文字處理工具</span></span>
   <div class="toolbar-div"></div>
   <button class="btn btn-primary" onclick="go();" title="計算 (F5)">▶ 計算</button>
   <label class="toggle"><input type="checkbox" id="chkAuto" checked onchange="setauto();">auto</label>
@@ -426,7 +426,7 @@ var defaultPattern = "INSERT INTO employees (first_name, last_name, department, 
 
 // ── L10N ──
 var L10N={
-zh:{brand:'DataWeave',subtitle:'文字處理工具',calc:'▶ 計算',calcTitle:'計算 (F5)',
+zh:{brand:'FleetLoom',subtitle:'文字處理工具',calc:'▶ 計算',calcTitle:'計算 (F5)',
 auto:'auto',filter:'篩選',collapse:'摺疊',snippetPlaceholder:'插入片段…',
 saveBtn:'💾 儲存',saveTitle:'儲存 pattern',loadBtn:'📂 載入',loadTitle:'載入 pattern',
 shareBtn:'🔗 分享',shareTitle:'複製分享連結',downloadBtn:'⤓ 下載',downloadTitle:'下載結果',
@@ -446,7 +446,7 @@ savePrompt:'為這個 pattern 命名：',saveEmpty:'Pattern 為空。',noSnippet
 delConfirm:'確定刪除這個 pattern？',copied:'連結已複製！',copyPrompt:'複製連結：',
 savedPatterns:'已儲存的 Pattern',savedFooter:' 個 pattern 已存於瀏覽器',helpTitle:'使用說明',
 langLabel:'中',langTitle:'正體中文'},
-en:{brand:'DataWeave',subtitle:'text manipulator',calc:'▶ Calculate',calcTitle:'Calculate (F5)',
+en:{brand:'FleetLoom',subtitle:'text manipulator',calc:'▶ Calculate',calcTitle:'Calculate (F5)',
 auto:'auto',filter:'filter',collapse:'collapse',snippetPlaceholder:'Insert snippet…',
 saveBtn:'💾 Save',saveTitle:'Save pattern',loadBtn:'📂 Load',loadTitle:'Load pattern',
 shareBtn:'🔗 Share',shareTitle:'Copy shareable URL',downloadBtn:'⤓ Download',downloadTitle:'Download results',
@@ -466,7 +466,7 @@ savePrompt:'Name for this pattern:',saveEmpty:'Pattern is empty.',noSnippets:'No
 delConfirm:'Delete this pattern?',copied:'URL copied!',copyPrompt:'Copy URL:',
 savedPatterns:'Saved Patterns',savedFooter:' pattern(s) stored in browser',helpTitle:'Help & Reference',
 langLabel:'EN',langTitle:'English'},
-ja:{brand:'DataWeave',subtitle:'テキスト処理ツール',calc:'▶ 計算',calcTitle:'計算 (F5)',
+ja:{brand:'FleetLoom',subtitle:'テキスト処理ツール',calc:'▶ 計算',calcTitle:'計算 (F5)',
 auto:'auto',filter:'フィルタ',collapse:'折畳',snippetPlaceholder:'スニペット挿入…',
 saveBtn:'💾 保存',saveTitle:'パターンを保存',loadBtn:'📂 読込',loadTitle:'パターンを読込',
 shareBtn:'🔗 共有',shareTitle:'共有URLをコピー',downloadBtn:'⤓ DL',downloadTitle:'結果をダウンロード',
@@ -518,7 +518,7 @@ function applyL10N(){
 }
 
 function switchLang(lang){
-  currentLang=lang;try{localStorage.setItem('dataweave_lang',lang);}catch(e){}
+  currentLang=lang;try{localStorage.setItem('fleetloom_lang',lang);}catch(e){}
   applyL10N();
   var btns=document.querySelectorAll('.lang-switch');btns.forEach(function(b){b.classList.toggle('active',b.dataset.lang===lang);});
 }
@@ -897,7 +897,7 @@ function insertAtCursor(field,value){
 }
 function insertsnippet(sel){var v=sel.value;sel.selectedIndex=0;if(!v||v==='NULL'||v==='addYourOwn')return;insertAtCursor($('txtPattern'),v);}
 
-var STORAGE_KEY='dataweave_snippets';
+var STORAGE_KEY='fleetloom_snippets';
 function loadSnippets(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||[];}catch(e){return[];}}
 function saveSnippets(list){localStorage.setItem(STORAGE_KEY,JSON.stringify(list));refreshSnippetDropdown();}
 function saveSnippet(){
@@ -971,7 +971,7 @@ function shuffleResult(){shuffleData();}
 function removeDuplicatesControl(target){var rows=getRows(target),uniques=rows.unique();showCount(target,uniques.length,rows.length);setRows(target,uniques);}
 function removeDataDuplicates(){removeDuplicatesControl('Data');}
 function removeResultDuplicates(){removeDataDuplicates();}
-function downloadResult(){var text=$('txtResults').value,blob=new Blob([text],{type:'text/plain'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='dataweave_results.txt';a.click();URL.revokeObjectURL(a.href);}
+function downloadResult(){var text=$('txtResults').value,blob=new Blob([text],{type:'text/plain'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fleetloom_results.txt';a.click();URL.revokeObjectURL(a.href);}
 function exportProject(){
   var project={
     v:1,
@@ -988,7 +988,7 @@ function exportProject(){
   var a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
   var ts=new Date().toISOString().replace(/:/g,'-').replace(/\..+/,'');
-  a.download='dataweave_'+ts+'.json';
+  a.download='fleetloom_'+ts+'.json';
   a.click();
   URL.revokeObjectURL(a.href);
 }
@@ -1137,7 +1137,7 @@ document.addEventListener('keydown',function(e){
 
 // ── INIT ──
 function init(){
-  try{var sl=localStorage.getItem('dataweave_lang');if(sl&&L10N[sl])currentLang=sl;}catch(e){}
+  try{var sl=localStorage.getItem('fleetloom_lang');if(sl&&L10N[sl])currentLang=sl;}catch(e){}
   loadQueryString();
   if(!$('txtData').value)$('txtData').value=defaultText;
   if(!$('txtPattern').value)$('txtPattern').value=defaultPattern;

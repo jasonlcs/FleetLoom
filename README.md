@@ -1,4 +1,4 @@
-# DataWeave
+# FleetLoom
 
 致敬 [NimbleText](https://nimbletext.com/Live) 的純文字樣板轉換工具，純自用。
 
@@ -15,7 +15,7 @@
 
 ## 使用
 
-瀏覽器直接開啟 `dataweave.html` 即可。
+瀏覽器直接開啟 `fleetloom.html` 即可。
 
 ## 原作
 
