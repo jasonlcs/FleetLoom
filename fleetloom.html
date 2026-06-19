@@ -289,6 +289,11 @@ select:focus { border-color: var(--accent); }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
 </style>
 </head>
 <body>
@@ -297,7 +302,7 @@ select:focus { border-color: var(--accent); }
 <div id="toolbar">
   <span id="brand">FleetLoom <span>· 文字處理工具</span></span>
   <div class="toolbar-div"></div>
-  <button class="btn btn-primary" onclick="go();" title="計算 (F5)">▶ 計算</button>
+  <button class="btn btn-primary" id="btnCalc" onclick="go();" title="計算 (F5)">▶ 計算</button>
   <label class="toggle"><input type="checkbox" id="chkAuto" checked onchange="setauto();">auto</label>
   <label class="toggle"><input type="checkbox" id="chkFilter" onchange="toggleFilter();">篩選</label>
   <label class="toggle"><input type="checkbox" id="chkCollapse" onchange="toggleCollapse();">摺疊</label>
@@ -331,12 +336,12 @@ select:focus { border-color: var(--accent); }
   <button class="btn btn-ghost btn-xs lang-switch" data-lang="en" onclick="switchLang('en')" title="English">EN</button>
   <button class="btn btn-ghost btn-xs lang-switch" data-lang="ja" onclick="switchLang('ja')" title="日本語">日</button>
   <button class="btn btn-ghost btn-xs" onclick="saveSnippet();" id="btnSaveSnippet" title="儲存 pattern">💾 儲存</button>
-  <button class="btn btn-ghost btn-xs" onclick="showSnippets();" title="載入 pattern">📂 載入</button>
-  <button class="btn btn-ghost btn-xs" onclick="downloadResult();" title="下載結果">⤓ 下載</button>
-  <button class="btn btn-ghost btn-xs" onclick="exportProject();" title="匯出專案 (JSON)">📤 匯出</button>
-  <button class="btn btn-ghost btn-xs" onclick="$('importFile').click();" title="匯入專案 (JSON)">📥 匯入</button>
+  <button class="btn btn-ghost btn-xs" id="btnShowSnippets" onclick="showSnippets();" title="載入 pattern">📂 載入</button>
+  <button class="btn btn-ghost btn-xs" id="btnDownloadResult" onclick="downloadResult();" title="下載結果">⤓ 下載</button>
+  <button class="btn btn-ghost btn-xs" id="btnExportProject" onclick="exportProject();" title="匯出專案 (JSON)">📤 匯出</button>
+  <button class="btn btn-ghost btn-xs" id="btnImportProject" onclick="$('importFile').click();" title="匯入專案 (JSON)">📥 匯入</button>
   <input type="file" id="importFile" accept=".json" onchange="importProject(this);" style="display:none">
-  <button class="btn btn-ghost btn-xs" onclick="clearDefault();" title="清除全部">✕ 清除</button>
+  <button class="btn btn-ghost btn-xs" id="btnClearDefault" onclick="clearDefault();" title="清除全部">✕ 清除</button>
   <button class="btn btn-ghost btn-icon" onclick="showHelp();" title="使用說明">?</button>
 </div>
 
@@ -429,7 +434,7 @@ var L10N={
 zh:{brand:'FleetLoom',subtitle:'文字處理工具',calc:'▶ 計算',calcTitle:'計算 (F5)',
 auto:'auto',filter:'篩選',collapse:'摺疊',snippetPlaceholder:'插入片段…',
 saveBtn:'💾 儲存',saveTitle:'儲存 pattern',loadBtn:'📂 載入',loadTitle:'載入 pattern',
-shareBtn:'🔗 分享',shareTitle:'複製分享連結',downloadBtn:'⤓ 下載',downloadTitle:'下載結果',
+shareBtn:'🔗 分享',shareTitle:'複製分享連結',exportBtn:'📤 匯出',exportTitle:'匯出專案 (JSON)',importBtn:'📥 匯入',importTitle:'匯入專案 (JSON)',downloadBtn:'⤓ 下載',downloadTitle:'下載結果',
 clearBtn:'✕ 清除',clearTitle:'清除全部',
 dataHeader:'DATA',filterHeader:'篩選 (WHERE)',patternHeader:'PATTERN',
 sortTitle:'A→Z 排序',colSortTitle:'指定欄位排序',invertTitle:'反轉順序',shuffleTitle:'隨機排列',dedupTitle:'移除重複列',
@@ -449,7 +454,7 @@ langLabel:'中',langTitle:'正體中文'},
 en:{brand:'FleetLoom',subtitle:'text manipulator',calc:'▶ Calculate',calcTitle:'Calculate (F5)',
 auto:'auto',filter:'filter',collapse:'collapse',snippetPlaceholder:'Insert snippet…',
 saveBtn:'💾 Save',saveTitle:'Save pattern',loadBtn:'📂 Load',loadTitle:'Load pattern',
-shareBtn:'🔗 Share',shareTitle:'Copy shareable URL',downloadBtn:'⤓ Download',downloadTitle:'Download results',
+shareBtn:'🔗 Share',shareTitle:'Copy shareable URL',exportBtn:'📤 Export',exportTitle:'Export project (JSON)',importBtn:'📥 Import',importTitle:'Import project (JSON)',downloadBtn:'⤓ Download',downloadTitle:'Download results',
 clearBtn:'✕ Clear',clearTitle:'Clear all',
 dataHeader:'DATA',filterHeader:'FILTER (WHERE)',patternHeader:'PATTERN',
 sortTitle:'Sort A→Z',colSortTitle:'Sort by column',invertTitle:'Reverse order',shuffleTitle:'Randomize',dedupTitle:'Remove duplicates',
@@ -469,7 +474,7 @@ langLabel:'EN',langTitle:'English'},
 ja:{brand:'FleetLoom',subtitle:'テキスト処理ツール',calc:'▶ 計算',calcTitle:'計算 (F5)',
 auto:'auto',filter:'フィルタ',collapse:'折畳',snippetPlaceholder:'スニペット挿入…',
 saveBtn:'💾 保存',saveTitle:'パターンを保存',loadBtn:'📂 読込',loadTitle:'パターンを読込',
-shareBtn:'🔗 共有',shareTitle:'共有URLをコピー',downloadBtn:'⤓ DL',downloadTitle:'結果をダウンロード',
+shareBtn:'🔗 共有',shareTitle:'共有URLをコピー',exportBtn:'📤 出力',exportTitle:'プロジェクトを出力 (JSON)',importBtn:'📥 入力',importTitle:'プロジェクトを入力 (JSON)',downloadBtn:'⤓ DL',downloadTitle:'結果をダウンロード',
 clearBtn:'✕ 消去',clearTitle:'全て消去',
 dataHeader:'DATA',filterHeader:'フィルタ (WHERE)',patternHeader:'PATTERN',
 sortTitle:'A→Z 並替',colSortTitle:'列で並替',invertTitle:'順序反転',shuffleTitle:'ランダム',dedupTitle:'重複削除',
@@ -495,11 +500,11 @@ function applyL10N(){
   // Toolbar
   var d=document;
   var brand=d.querySelector('#brand');if(brand)brand.innerHTML=L.brand+' <span>· '+L.subtitle+'</span>';
-  var calc=d.getElementById('calc_button');if(calc){calc.value=L.calc;calc.title=L.calcTitle;}
+  var calc=d.getElementById('btnCalc');if(calc){calc.textContent=L.calc;calc.title=L.calcTitle;}
   var sel=d.getElementById('selectSnippet');if(sel&&sel.options[0])sel.options[0].textContent=L.snippetPlaceholder;
   // Toolbar buttons
-  var btns=[['saveSnippet',L.saveBtn,L.saveTitle],['showSnippets',L.loadBtn,L.loadTitle],['downloadResult',L.downloadBtn,L.downloadTitle],['clearDefault',L.clearBtn,L.clearTitle]];
-  btns.forEach(function(b){var el=d.querySelector('[onclick*="'+b[0]+'"]');if(el){el.childNodes[0]&&(el.childNodes[0].textContent=b[1]);el.title=b[2];}});
+  var btnMap={'btnSaveSnippet':[L.saveBtn,L.saveTitle],'btnShowSnippets':[L.loadBtn,L.loadTitle],'btnDownloadResult':[L.downloadBtn,L.downloadTitle],'btnClearDefault':[L.clearBtn,L.clearTitle],'btnExportProject':[L.exportBtn||'📤 匯出',L.exportTitle||'匯出專案 (JSON)'],'btnImportProject':[L.importBtn||'📥 匯入',L.importTitle||'匯入專案 (JSON)']};
+  Object.keys(btnMap).forEach(function(id){var el=d.getElementById(id);if(el){el.textContent=btnMap[id][0];el.title=btnMap[id][1];}});
   var copyBtn=d.getElementById('copyBtn');if(copyBtn && copyBtn.textContent.indexOf('✅')===-1)copyBtn.textContent=L.copyLabel;
   // Toggles
   var toggles=d.querySelectorAll('.toggle');if(toggles[1]&&toggles[1].childNodes[1])toggles[1].childNodes[1].textContent=L.filter;if(toggles[2]&&toggles[2].childNodes[1])toggles[2].childNodes[1].textContent=L.collapse;
@@ -754,12 +759,8 @@ function apply(pattern, row, fieldDelim, rowNum, origRowNum, numRows, dataRows, 
       var fn = new Function('rowDelim','rowNum','origRowNum','row','numRows','fields','fieldDelim','headers','trimFields','"use strict";return (' + b.c + ')');
       val = fn(rowDelim, rowNum, origRowNum, row, numRows, fields, fieldDelim, headers, trimFields);
     } catch (errExpr) {
-      try {
-        val = eval(b.c);
-      } catch (errEval) {
-        val = '\n[block ' + i + '] 表達式錯誤';
-        console.error('Expression error [' + b.m + ']:', errEval.message || errEval);
-      }
+      val = '\n[block ' + i + '] 表達式錯誤';
+      console.error('Expression error [' + b.m + ']:', errExpr.message || errExpr);
     }
     if (val === null || val === undefined) val = '';
     result = result.replace(b.m, val);
@@ -820,13 +821,22 @@ function calculate(data,pattern,filter,rowDelim,fieldDelim,outParam){
   if(!autoPreview&&reverseEngineerPattern(pattern,data,$('txtResults').value,dataRows[0]||'',fieldDelim)){outParam.numRows=numRows;return $('txtResults').value;}
   var csvHeaders=csvMode&&csvParsed&&csvParsed.length>0?csvParsed[0]:null;
   if(isFiltering&&filter&&filter.trim()!==''){
-    var filteredRows=[],filteredCSV=csvParsed?[]:null,filteredOrig=[],filterCache={};
-    var filterPattern='<% '+filter+' %>';
+    var filteredRows=[],filteredCSV=csvParsed?[]:null,filteredOrig=[];
+    var filterHeaders=csvHeaders||(dataRows.length>0?splitBy(dataRows[0],fieldDelim,columnDelimiterIsRegex):[]);
+    var filterBlocks=compileBlocks('<% '+filter+' %>',filterHeaders);
+    var filterFn;
+    if(filterBlocks.length>0){
+      filterFn=new Function('rowDelim','rowNum','origRowNum','row','numRows','fields','fieldDelim','headers','trimFields','"use strict";return ('+filterBlocks[0].c+')');
+    }else{
+      filterFn=function(){return true;};
+    }
     for(var fi=0;fi<dataRows.length;fi++){
       try{
-        var filterCode=apply(filterPattern,dataRows[fi],fieldDelim,fi,fi,numRows,dataRows,rowDelim,pattern,filterCache,csvParsed?csvParsed[fi]:null,csvHeaders);
-        var filterFn=new Function('"use strict";return ('+filterCode+')');
-        if(filterFn()){filteredRows.push(dataRows[fi]);if(filteredCSV)filteredCSV.push(csvParsed[fi]);filteredOrig.push(fi);}
+        var ffields=csvParsed?csvParsed[fi]:splitBy(dataRows[fi],fieldDelim,columnDelimiterIsRegex);
+        if(ignoreEmptyFields)ffields=ffields.clean(trimFields);
+        if(filterFn(rowDelim,fi,fi,dataRows[fi],numRows,ffields,fieldDelim,filterHeaders,trimFields)){
+          filteredRows.push(dataRows[fi]);if(filteredCSV)filteredCSV.push(csvParsed[fi]);filteredOrig.push(fi);
+        }
       }catch(e){}
     }
     dataRows=filteredRows;if(filteredCSV)csvParsed=filteredCSV;
@@ -924,17 +934,21 @@ function showSnippets(){
   overlay.appendChild(modal);document.body.appendChild(overlay);
   modal.querySelector('.modal-close').onclick=function(){overlay.parentNode.removeChild(overlay);};
   var listDiv=document.getElementById('snippetList');
-  for(var i=0;i<list.length;i++){(function(idx){
-    var item=document.createElement('div');item.className='snippet-item';
-    var preview=list[idx].pattern.replace(/\n/g,' ↵ ').slice(0,80);
+  for(var i=0;i<list.length;i++){
+    var item=document.createElement('div');item.className='snippet-item';item.dataset.index=i;
+    var preview=list[i].pattern.replace(/\n/g,' ↵ ').slice(0,80);
     var left=document.createElement('div');left.style.cssText='flex:1;min-width:0;';
-    left.innerHTML='<div class="name">'+escHtml(list[idx].name)+'</div><div class="preview">'+escHtml(preview)+'</div><div class="date">'+escHtml(list[idx].date||'')+'</div>';
-    left.onclick=function(){loadSnippetByIndex(idx);};
+    left.innerHTML='<div class="name">'+escHtml(list[i].name)+'</div><div class="preview">'+escHtml(preview)+'</div><div class="date">'+escHtml(list[i].date||'')+'</div>';
     item.appendChild(left);
     var del=document.createElement('button');del.className='snippet-del';del.textContent='×';del.title='Delete';
-    del.onclick=function(e){e.stopPropagation();deleteSnippet(idx);};
     item.appendChild(del);listDiv.appendChild(item);
-  })(i);}
+  }
+  listDiv.onclick=function(e){
+    var item=e.target.closest('.snippet-item');if(!item)return;
+    var idx=parseInt(item.dataset.index,10);
+    if(e.target.closest('.snippet-del')){e.stopPropagation();deleteSnippet(idx);return;}
+    loadSnippetByIndex(idx);
+  };
 }
 
 function refreshSnippetDropdown(){
